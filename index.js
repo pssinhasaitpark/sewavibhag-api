@@ -14,6 +14,7 @@ app.use(
         origin: [
             "http://localhost:3000",
             "http://localhost:3001", 
+            "https://sewavibhag-client.pages.dev",
         ],
         methods: ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
         optionsSuccessStatus: 200,
