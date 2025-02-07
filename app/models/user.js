@@ -5,9 +5,9 @@ const bcrypt = require('bcrypt');
 const userSchema = new mongoose.Schema({
     user_type: {
         type: String,
-        enum: ['1', '2', '3', '4', '5'],
         required: true,
-        comment: '1 - All India, 2 - Keshtra, 3 - Prant, 4 - Vibhag, 5 - Jila',
+        enum: ['kendra', 'keshtra', 'prant', 'vibhag', 'jila'],
+        comment: 'kendra, keshtra, prant, vibhag, jila',
     },
     user_name: {
         type: String,
@@ -20,24 +20,22 @@ const userSchema = new mongoose.Schema({
         required: true,
         trim: true,
     },
+    email: {
+        type: String,
+        trim: true,
+    },
     mobile: {
         type: String,
         required: true,
-        unique: true,
     },
     password: {
         type: String,
         required: true,
     },
-    created_at: {
-        type: Date,
-        default: Date.now,
-    },
-    updated_at: {
-        type: Date,
-        default: Date.now,
-    },
-});
+},
+    {
+        timestamps: true,
+    });
 
 // Middleware to hash the password before saving the user
 userSchema.pre('save', async function (next) {
@@ -52,6 +50,7 @@ userSchema.methods.comparePassword = function (password) {
     return bcrypt.compare(password, this.password);
 };
 
+// Ensure you're exporting the model correctly
 const User = mongoose.model('User', userSchema);
 
-module.exports = User;
+module.exports = User;  // Export the model as 'User'

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporting Form</title>
+    <link rel="stylesheet" href="/style.css">
+    <script defer>
+        function toggleFields() {
+            const categoryType = document.getElementById('categoryType').value;
+            const nagariyaFields = document.getElementById('nagariyaFields');
+            const graminFields = document.getElementById('graminFields');
+
+            // Show or hide fields based on the selected category
+            if (categoryType === 'Nagariya') {
+                nagariyaFields.classList.add('show');
+                graminFields.classList.remove('show');
+            } else if (categoryType === 'Gramin') {
+                graminFields.classList.add('show');
+                nagariyaFields.classList.remove('show');
+            } else {
+                // If no category is selected, hide both
+                nagariyaFields.classList.remove('show');
+                graminFields.classList.remove('show');
+            }
+        }
+
+        // Show Nagariya subcategory fields (Mahanagar, JilaKendra, AnyaNagar)
+        function toggleNagariyaCategory() {
+            const nagariyaCategory = document.getElementById('nagariyaCategory').value;
+            const fields = {
+                'mahanagarFields': ['zila_sam_mahanagar_bhag_sankhya', 'sewa_basti_sankhya', 'sewa_kary_yukt_sewa_basti',
+                    'vyavsayee_w_mahawidyalay_shakha_w_milan_sankhya', 'sewa_basti_palak_shakha_w_milan_sankhya',
+                    'sewa_karyakarta_yukt_shakha_w_milan_sankhya', 'kul_sewa_karyakarta', 'mahanagar_mein_kul_sewa_kary',
+                    'masik_sewa_basti_sampark_karne_wali_shakha_w_milan_sankhya'],
+                'jilaKendraFields': ['zila_sam_jila_kendra_bhag_sankhya', 'inmein_sewa_basti_sankhya', 'sewa_kary_yukt_sewa_basti',
+                    'vyavsayee_w_mahawidyalay_shakha_w_milan_sankhya', 'sewa_basti_palak_shakha_w_milan_sankhya',
+                    'sewa_karyakarta_yukt_shakha_w_milan_sankhya', 'kul_sewa_karyakarta', 'jila_kendra_mein_kul_sewa_kary',
+                    'masik_sewa_basti_sampark_karne_wali_shakha_w_milan_sankhya'],
+                'anyaNagarFields': ['zila_sam_anya_nagar_bhag_sankhya', 'inmein_sewa_basti_sankhya', 'sewa_kary_yukt_sewa_basti',
+                    'vyavsayee_w_mahawidyalay_shakha_w_milan_sankhya', 'sewa_basti_palak_shakha_w_milan_sankhya',
+                    'sewa_karyakarta_yukt_shakha_w_milan_sankhya', 'kul_sewa_karyakarta', 'anya_nagar_mein_kul_sewa_kary',
+                    'masik_sewa_basti_sampark_karne_wali_shakha_w_milan_sankhya']
+            };
+
+            // Hide all fields initially
+            Object.keys(fields).forEach(field => {
+                document.getElementById(field).classList.remove('show');
+            });
+
+            // Show fields based on the selected category
+            if (nagariyaCategory === 'Mahanagar') {
+                document.getElementById('mahanagarFields').classList.add('show');
+            } else if (nagariyaCategory === 'JilaKendra') {
+                document.getElementById('jilaKendraFields').classList.add('show');
+            } else if (nagariyaCategory === 'AnyaNagar') {
+                document.getElementById('anyaNagarFields').classList.add('show');
+            }
+        }
+
+        // Show Gramin subcategory fields based on population size
+        function toggleGraminCategory() {
+            const graminCategory = document.getElementById('graminCategory').value;
+            const fields = {
+                'villagesOver5000Fields': ['total_villages', 'business_and_farming_villages', 'service_work_villages_over5000', 'total_service_work_over5000'],
+                'villagesUnder5000Fields': ['service_work_villages_under5000', 'total_service_work_under5000']
+            };
+
+            // Hide all fields initially
+            Object.keys(fields).forEach(field => {
+                const fieldContainer = document.getElementById(field);
+                if (fieldContainer) {
+                    fieldContainer.classList.remove('show');
+                }
+            });
+
+            // Show fields based on the selected category
+            if (graminCategory === 'VillagesOver5000') {
+                document.getElementById('villagesOver5000Fields').classList.add('show');
+            } else if (graminCategory === 'VillagesUnder5000') {
+                document.getElementById('villagesUnder5000Fields').classList.add('show');
+            }
+        }
+    </script>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>Reporting Form</h2>
+        <form action="/submit-reporting-form" method="POST">
+
+            <!-- Select Nagar Type -->
+            <div class="category-group">
+                <label for="categoryType">Select Nagar Type</label>
+                <select name="categoryType" id="categoryType" required onchange="toggleFields()">
+                    <option value="">Select Category</option>
+                    <option value="Nagariya">Nagariya</option>
+                    <option value="Gramin">Gramin</option>
+                </select>
+            </div>
+
+            <!-- Nagariya Fields -->
+            <div id="nagariyaFields" class="dynamic-fields">
+                <label for="nagariyaCategory">Select Nagar Category</label>
+                <select name="nagariyaCategory" id="nagariyaCategory" required onchange="toggleNagariyaCategory()">
+                    <option value="">Select Category</option>
+                    <option value="Mahanagar">Mahanagar</option>
+                    <option value="JilaKendra">Jila Kendra</option>
+                    <option value="AnyaNagar">Anya Nagar</option>
+                </select>
+
+                <!-- Mahanagar Fields -->
+                <div id="mahanagarFields" class="category-group dynamic-fields">
+                    <h4>Mahanagar</h4>
+                    <label for="zilaSamMahanagarBhagSankhya">Zila Sam Mahanagar Bhag Sankhya</label>
+                    <input type="text" name="nagariya.mahanagar.zila_sam_mahanagar_bhag_sankhya"
+                        id="zilaSamMahanagarBhagSankhya" placeholder="Enter Zila Sam Mahanagar Bhag Sankhya">
+
+                    <label for="sewaBastiSankhya">Sewa Basti Sankhya</label>
+                    <input type="text" name="nagariya.mahanagar.sewa_basti_sankhya" id="sewaBastiSankhya"
+                        placeholder="Enter Sewa Basti Sankhya">
+
+                    <label for="sewaKaryYuktSewaBasti">Sewa Kary Yukt Sewa Basti</label>
+                    <input type="text" name="nagariya.mahanagar.sewa_kary_yukt_sewa_basti" id="sewaKaryYuktSewaBasti"
+                        placeholder="Enter Sewa Kary Yukt Sewa Basti">
+
+                    <label for="vyavsayeeMahawidyalayShakha">Vyavsayee & Mahawidyalay Shakha</label>
+                    <input type="text" name="nagariya.mahanagar.vyavsayee_w_mahawidyalay_shakha_w_milan_sankhya"
+                        id="vyavsayeeMahawidyalayShakha" placeholder="Enter Vyavsayee & Mahawidyalay Shakha">
+
+                    <label for="sewaBastiPalakShakha">Sewa Basti Palak Shakha</label>
+                    <input type="text" name="nagariya.mahanagar.sewa_basti_palak_shakha_w_milan_sankhya"
+                        id="sewaBastiPalakShakha" placeholder="Enter Sewa Basti Palak Shakha">
+
+                    <label for="sewaKaryakartaYuktShakha">Sewa Karyakarta Yukt Shakha</label>
+                    <input type="text" name="nagariya.mahanagar.sewa_karyakarta_yukt_shakha_w_milan_sankhya"
+                        id="sewaKaryakartaYuktShakha" placeholder="Enter Sewa Karyakarta Yukt Shakha">
+
+                    <label for="kulSewaKaryakarta">Kul Sewa Karyakarta</label>
+                    <input type="text" name="nagariya.mahanagar.kul_sewa_karyakarta" id="kulSewaKaryakarta"
+                        placeholder="Enter Kul Sewa Karyakarta">
+
+                    <label for="mahanagarMeinKulSewaKary">Mahanagar Mein Kul Sewa Kary</label>
+                    <input type="text" name="nagariya.mahanagar.mahanagar_mein_kul_sewa_kary"
+                        id="mahanagarMeinKulSewaKary" placeholder="Enter Mahanagar Mein Kul Sewa Kary">
+
+                    <label for="masikSewaBastiSampark">Masik Sewa Basti Sampark</label>
+                    <input type="text"
+                        name="nagariya.mahanagar.masik_sewa_basti_sampark_karne_wali_shakha_w_milan_sankhya"
+                        id="masikSewaBastiSampark" placeholder="Enter Masik Sewa Basti Sampark">
+                </div>
+
+                <!-- JilaKendra Fields -->
+                <div id="jilaKendraFields" class="category-group dynamic-fields">
+                    <h4>Jila Kendra</h4>
+                    <label for="zilaSamJilaKendraBhagSankhya">Zila Sam Jila Kendra Bhag Sankhya</label>
+                    <input type="text" name="nagariya.jilaKendra.zila_sam_jila_kendra_bhag_sankhya"
+                        id="zilaSamJilaKendraBhagSankhya" placeholder="Enter Zila Sam Jila Kendra Bhag Sankhya">
+
+                    <label for="inmeinSewaBastiSankhya">Inmein Sewa Basti Sankhya</label>
+                    <input type="text" name="nagariya.jilaKendra.inmein_sewa_basti_sankhya" id="inmeinSewaBastiSankhya"
+                        placeholder="Enter Inmein Sewa Basti Sankhya">
+
+                    <label for="sewaKaryYuktSewaBastiJilaKendra">Sewa Kary Yukt Sewa Basti</label>
+                    <input type="text" name="nagariya.jilaKendra.sewa_kary_yukt_sewa_basti"
+                        id="sewaKaryYuktSewaBastiJilaKendra" placeholder="Enter Sewa Kary Yukt Sewa Basti">
+
+                    <label for="vyavsayeeMahawidyalayShakhaJilaKendra">Vyavsayee & Mahawidyalay Shakha</label>
+                    <input type="text" name="nagariya.jilaKendra.vyavsayee_w_mahawidyalay_shakha_w_milan_sankhya"
+                        id="vyavsayeeMahawidyalayShakhaJilaKendra" placeholder="Enter Vyavsayee & Mahawidyalay Shakha">
+
+                    <label for="sewaBastiPalakShakhaJilaKendra">Sewa Basti Palak Shakha</label>
+                    <input type="text" name="nagariya.jilaKendra.sewa_basti_palak_shakha_w_milan_sankhya"
+                        id="sewaBastiPalakShakhaJilaKendra" placeholder="Enter Sewa Basti Palak Shakha">
+
+                    <label for="sewaKaryakartaYuktShakhaJilaKendra">Sewa Karyakarta Yukt Shakha</label>
+                    <input type="text" name="nagariya.jilaKendra.sewa_karyakarta_yukt_shakha_w_milan_sankhya"
+                        id="sewaKaryakartaYuktShakhaJilaKendra" placeholder="Enter Sewa Karyakarta Yukt Shakha">
+
+                    <label for="kulSewaKaryakartaJilaKendra">Kul Sewa Karyakarta</label>
+                    <input type="text" name="nagariya.jilaKendra.kul_sewa_karyakarta" id="kulSewaKaryakartaJilaKendra"
+                        placeholder="Enter Kul Sewa Karyakarta">
+
+                    <label for="jilaKendraMeinKulSewaKary">Jila Kendra Mein Kul Sewa Kary</label>
+                    <input type="text" name="nagariya.jilaKendra.jila_kendra_mein_kul_sewa_kary"
+                        id="jilaKendraMeinKulSewaKary" placeholder="Enter Jila Kendra Mein Kul Sewa Kary">
+
+                    <label for="masikSewaBastiSamparkJilaKendra">Masik Sewa Basti Sampark</label>
+                    <input type="text"
+                        name="nagariya.jilaKendra.masik_sewa_basti_sampark_karne_wali_shakha_w_milan_sankhya"
+                        id="masikSewaBastiSamparkJilaKendra" placeholder="Enter Masik Sewa Basti Sampark">
+                </div>
+
+                <!-- Anya Nagar Fields -->
+                <div id="anyaNagarFields" class="category-group dynamic-fields">
+                    <h4>Anya Nagar</h4>
+                    <label for="zilaSamAnyaNagarBhagSankhya">Zila Sam Anya Nagar Bhag Sankhya</label>
+                    <input type="text" name="nagariya.anyaNagar.zila_sam_anya_nagar_bhag_sankhya"
+                        id="zilaSamAnyaNagarBhagSankhya" placeholder="Enter Zila Sam Anya Nagar Bhag Sankhya">
+
+                    <label for="inmeinSewaBastiSankhyaAnyaNagar">Inmein Sewa Basti Sankhya</label>
+                    <input type="text" name="nagariya.anyaNagar.inmein_sewa_basti_sankhya"
+                        id="inmeinSewaBastiSankhyaAnyaNagar" placeholder="Enter Inmein Sewa Basti Sankhya">
+
+                    <label for="sewaKaryYuktSewaBastiAnyaNagar">Sewa Kary Yukt Sewa Basti</label>
+                    <input type="text" name="nagariya.anyaNagar.sewa_kary_yukt_sewa_basti"
+                        id="sewaKaryYuktSewaBastiAnyaNagar" placeholder="Enter Sewa Kary Yukt Sewa Basti">
+
+                    <label for="vyavsayeeMahawidyalayShakhaAnyaNagar">Vyavsayee & Mahawidyalay Shakha</label>
+                    <input type="text" name="nagariya.anyaNagar.vyavsayee_w_mahawidyalay_shakha_w_milan_sankhya"
+                        id="vyavsayeeMahawidyalayShakhaAnyaNagar" placeholder="Enter Vyavsayee & Mahawidyalay Shakha">
+
+                    <label for="sewaBastiPalakShakhaAnyaNagar">Sewa Basti Palak Shakha</label>
+                    <input type="text" name="nagariya.anyaNagar.sewa_basti_palak_shakha_w_milan_sankhya"
+                        id="sewaBastiPalakShakhaAnyaNagar" placeholder="Enter Sewa Basti Palak Shakha">
+
+                    <label for="sewaKaryakartaYuktShakhaAnyaNagar">Sewa Karyakarta Yukt Shakha</label>
+                    <input type="text" name="nagariya.anyaNagar.sewa_karyakarta_yukt_shakha_w_milan_sankhya"
+                        id="sewaKaryakartaYuktShakhaAnyaNagar" placeholder="Enter Sewa Karyakarta Yukt Shakha">
+
+                    <label for="kulSewaKaryakartaAnyaNagar">Kul Sewa Karyakarta</label>
+                    <input type="text" name="nagariya.anyaNagar.kul_sewa_karyakarta" id="kulSewaKaryakartaAnyaNagar"
+                        placeholder="Enter Kul Sewa Karyakarta">
+
+                    <label for="anyaNagarMeinKulSewaKary">Anya Nagar Mein Kul Sewa Kary</label>
+                    <input type="text" name="nagariya.anyaNagar.anya_nagar_mein_kul_sewa_kary"
+                        id="anyaNagarMeinKulSewaKary" placeholder="Enter Anya Nagar Mein Kul Sewa Kary">
+
+                    <label for="masikSewaBastiSamparkAnyaNagar">Masik Sewa Basti Sampark</label>
+                    <input type="text"
+                        name="nagariya.anyaNagar.masik_sewa_basti_sampark_karne_wali_shakha_w_milan_sankhya"
+                        id="masikSewaBastiSamparkAnyaNagar" placeholder="Enter Masik Sewa Basti Sampark">
+                </div>
+
+                <!-- Gramin fields -->
+                <div id="graminFields" class="dynamic-fields">
+                    <label for="graminCategory">Select Gramin Category</label>
+                    <select name="graminCategory" id="graminCategory" onchange="toggleGraminCategory()">
+                        <option value="">Select Category</option>
+                        <option value="VillagesOver5000">Villages with Population Over 5000</option>
+                        <option value="VillagesUnder5000">Villages with Population Under 5000</option>
+                    </select>
+
+                    <!-- Villages Over 5000 Fields -->
+                    <div id="villagesOver5000Fields" class="category-group dynamic-fields">
+                        <label for="total_villages">Total Villages</label>
+                        <input type="text" name="gramin.villagesOver5000.total_villages" id="total_villages"
+                            placeholder="Enter Total Villages">
+
+                        <label for="business_and_farming_villages">Business or Farming Villages</label>
+                        <input type="text" name="gramin.villagesOver5000.business_and_farming_villages"
+                            id="business_and_farming_villages" placeholder="Enter Business or Farming Villages">
+
+                        <label for="service_work_villages_over5000">Service-Enabled Villages</label>
+                        <input type="text" name="gramin.villagesOver5000.service_work_villages"
+                            id="service_work_villages_over5000" placeholder="Enter Service-Enabled Villages">
+
+                        <label for="total_service_work_over5000">Total Service Work</label>
+                        <input type="text" name="gramin.villagesOver5000.total_service_work"
+                            id="total_service_work_over5000" placeholder="Enter Total Service Work">
+                    </div>
+
+                    <!-- Villages Under 5000 Fields -->
+                    <div id="villagesUnder5000Fields" class="category-group dynamic-fields">
+                        <label for="service_work_villages_under5000">Service-Enabled Villages</label>
+                        <input type="text" name="gramin.villagesUnder5000.service_work_villages"
+                            id="service_work_villages_under5000" placeholder="Enter Service-Enabled Villages">
+
+                        <label for="total_service_work_under5000">Total Service Work</label>
+                        <input type="text" name="gramin.villagesUnder5000.total_service_work"
+                            id="total_service_work_under5000" placeholder="Enter Total Service Work">
+                    </div>
+                </div>
+
+
+                <button type="submit">Submit Reporting Form</button>
+        </form>
+    </div>
+
+</body>
+
+</html>

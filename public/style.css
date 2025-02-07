@@ -1,0 +1,88 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f7f7f7;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 80%;
+    margin: 0 auto;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.category-group {
+    margin-bottom: 20px;
+}
+
+.category-group label {
+    font-size: 16px;
+    font-weight: bold;
+    color: #555;
+}
+
+.category-group select,
+.category-group input {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-top: 5px;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.dynamic-fields {
+    display: none;
+    margin-top: 10px;
+}
+
+.dynamic-fields.show {
+    display: block;
+}
+
+.dynamic-fields input {
+    margin-bottom: 10px;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: #007BFF;
+}
+
+input[type="text"]:hover {
+    border-color: #007BFF;
+}
+
+select:focus,
+input[type="text"]:focus {
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.category-group {
+    margin-bottom: 30px;
+}
