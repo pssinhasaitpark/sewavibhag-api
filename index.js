@@ -1,19 +1,24 @@
 const express = require('express');
 const cors = require('cors');
-const routes = require('./routes/index'); 
-require('dotenv').config(); 
+const routes = require('./app/routes/index');
+const connectDB = require('./app/dbConfig/db-config');
+const path = require('path');
+require('dotenv').config();
 
 // Import the database connection function
-const connectDB = require('./DB-Config/db-config'); 
 
 const app = express();
+// Set EJS as the view engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
+app.use(express.static(path.join(__dirname, 'public')));
 // Middleware setup for CORS
 app.use(
     cors({
         origin: [
             "http://localhost:3000",
-            "http://localhost:3001", 
+            "http://localhost:3001",
             "https://sewavibhag-client.pages.dev",
         ],
         methods: ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
@@ -28,7 +33,7 @@ app.use(express.json());
 connectDB();
 
 // Use the routes defined in routes/index.js
-app.use('/api', routes); 
+app.use('/api/v1', routes);
 
 // Default route (for testing or a simple greeting)
 app.get('/', (req, res) => {
@@ -36,6 +41,11 @@ app.get('/', (req, res) => {
         message: 'Hello, World!',
         error: false,
     });
+});
+
+
+app.get('/report-form', (req, res) => {
+    res.render('reportingForm'); // This will render the reportingForm.ejs template
 });
 
 // Start the server and listen on a specified port (default: 5000)
