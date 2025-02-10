@@ -7,8 +7,10 @@ const vibhagSchema = new Schema({
     prant_id: { type: Schema.Types.ObjectId, ref: 'Prant', required: true },
     kshetra_id: { type: Schema.Types.ObjectId, ref: 'Kshetra', required: true },
     kendra_id: { type: Schema.Types.ObjectId, ref: 'Kendra', required: true },
-},{
-    timestamps :true,
+}, {
+    timestamps: true,
 });
 
-exports.Vibhag = mongoose.model('Vibhag', vibhagSchema);
+const Vibhag = mongoose.model('Vibhag', vibhagSchema);
+
+module.exports = Vibhag

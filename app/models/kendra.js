@@ -8,6 +8,6 @@ const kendraSchema = new Schema({
 });
 
 // Create and export models from schemas
-exports.Kendra = mongoose.model('Kendra', kendraSchema);
+const Kendra = mongoose.model('Kendra', kendraSchema);
 
-
+module.exports = Kendra;
