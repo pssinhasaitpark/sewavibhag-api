@@ -14,17 +14,13 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 // Middleware setup for CORS
-app.use(
-    cors({
-        origin: [
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "https://sewavibhag-client.pages.dev",
-        ],
-        methods: ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
-        optionsSuccessStatus: 200,
-    })
-);
+
+app.use(cors({
+    origin: ["http://localhost:3000", "http://localhost:3001", 'https://sewavibhag-client.pages.dev'],
+    methods: ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
+    credentials: true
+}));
+
 
 // Middleware to parse JSON bodies
 app.use(express.json());
