@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const routes = require('./app/routes/index');
 const connectDB = require('./app/dbConfig/db-config');
@@ -30,15 +31,9 @@ app.use(express.json());
 // Connect to MongoDB
 connectDB();
 
-// Use the routes defined in routes/index.js
-app.use('/api/v1', routes);
-
 // Default route (for testing or a simple greeting)
 app.get('/', (req, res) => {
-    res.send({
-        message: 'Hello, World!',
-        error: false,
-    });
+    res.status(200).json({ message: 'Hello, World!', error: false });
 });
 
 // Render the report form
@@ -46,14 +41,19 @@ app.get('/report-form', (req, res) => {
     res.render('reportingForm'); // This will render the reportingForm.ejs template
 });
 
+// API Routes
+app.use('/api/v1', routes);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// Start the server and listen on a specified port (default: 5000)
+// Create HTTP Server
+const server = http.createServer(app);
 const port = process.env.PORT || 5000;
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+
+server.listen(port, () => {
+    console.log(`🚀 Server is running on port ${port}`);
 });
