@@ -64,6 +64,7 @@ exports.createKendra = async (req, res) => {
                     reportData: row.reportData // Assuming CSV column is 'reportData'
                 };
             });
+            
             createdItems = await Jila.insertMany(jilaData);
             return res.status(201).json(createdItems);
         }
