@@ -242,26 +242,231 @@ exports.getJila = async (req, res) => {
             return res.status(400).json({ error: "Jila ID is required." });
         }
 
-        // Convert to ObjectId if needed
-        const query = mongoose.Types.ObjectId.isValid(jila_id)
-            ? { _id: new mongoose.Types.ObjectId(jila_id) }
-            : { _id: jila_id };
+        // Convert to ObjectId if valid
+        const objectId = mongoose.Types.ObjectId.isValid(jila_id) ? new mongoose.Types.ObjectId(jila_id) : jila_id;
 
-        const jilaData = await jila.findOne(query)
-            .populate('vibhag_id', 'vibhag_name')  
-            .populate('prant_id', 'prant_name')   
-            .populate('kshetra_id', 'kshetra_name') 
-            .populate('kendra_id', 'kendra_name'); 
+        const jilaData = await jila.aggregate([
+            { $match: { _id: objectId } }, // Filter by Jila ID
+            {
+                $lookup: {
+                    from: "vibhags",
+                    localField: "vibhag_id",
+                    foreignField: "_id",
+                    as: "vibhag"
+                }
+            },
+            {
+                $lookup: {
+                    from: "prants",
+                    localField: "prant_id",
+                    foreignField: "_id",
+                    as: "prant"
+                }
+            },
+            {
+                $lookup: {
+                    from: "kshetras",
+                    localField: "kshetra_id",
+                    foreignField: "_id",
+                    as: "kshetra"
+                }
+            },
+            {
+                $lookup: {
+                    from: "kendras",
+                    localField: "kendra_id",
+                    foreignField: "_id",
+                    as: "kendra"
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    jila_name: { $first: "$jila_name" },
+                    createdAt: { $first: "$createdAt" },
+                    updatedAt: { $first: "$updatedAt" },
+                    vibhag: { 
+                        $first: { 
+                            _id: { $arrayElemAt: ["$vibhag._id", 0] }, 
+                            name: { $arrayElemAt: ["$vibhag.vibhag_name", 0] }
+                        } 
+                    },
+                    prant: { 
+                        $first: { 
+                            _id: { $arrayElemAt: ["$prant._id", 0] }, 
+                            name: { $arrayElemAt: ["$prant.prant_name", 0] }
+                        } 
+                    },
+                    kshetra: { 
+                        $first: { 
+                            _id: { $arrayElemAt: ["$kshetra._id", 0] }, 
+                            name: { $arrayElemAt: ["$kshetra.kshetra_name", 0] }
+                        } 
+                    },
+                    kendra: { 
+                        $first: { 
+                            _id: { $arrayElemAt: ["$kendra._id", 0] }, 
+                            name: { $arrayElemAt: ["$kendra.kendra_name", 0] }
+                        } 
+                    }
+                }
+            }
+        ]);
 
-        if (!jilaData) {
+        if (!jilaData.length) {
             return res.status(404).json({ error: "Jila not found." });
         }
 
-        return res.status(200).json(jilaData);
+        return res.status(200).json(jilaData[0]); // Return the grouped result
     } catch (error) {
         console.error("Error fetching Jila:", error);
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 };
 
 
+
+exports.getHierarchy = async (req, res) => {
+    try {
+        const hierarchyData = await kendra.aggregate([
+            // Lookup Kshetra Data (Find Kshetras under Kendra)
+            {
+                $lookup: {
+                    from: "kshetras",
+                    localField: "_id",
+                    foreignField: "kendra_id",
+                    as: "kshetras",
+                },
+            },
+
+            // Lookup Prants for each Kshetra
+            {
+                $lookup: {
+                    from: "prants",
+                    localField: "kshetras._id",
+                    foreignField: "kshetra_id",
+                    as: "prants",
+                },
+            },
+
+            // Lookup Vibhags for each Prant
+            {
+                $lookup: {
+                    from: "vibhags",
+                    localField: "prants._id",
+                    foreignField: "prant_id",
+                    as: "vibhags",
+                },
+            },
+
+            // Lookup Jilas for each Vibhag
+            {
+                $lookup: {
+                    from: "jilas",
+                    localField: "vibhags._id",
+                    foreignField: "vibhag_id",
+                    as: "jilas",
+                },
+            },
+
+            // Restructure Data for Hierarchy
+            {
+                $project: {
+                    _id: 1,
+                    kendra_name: 1,
+                    total_kshetras: { $size: "$kshetras" }, // Count of Kshetras
+                    kshetras: {
+                        $map: {
+                            input: "$kshetras",
+                            as: "kshetra",
+                            in: {
+                                _id: "$$kshetra._id",
+                                kshetra_name: "$$kshetra.kshetra_name",
+                                total_prants: {
+                                    $size: {
+                                        $filter: {
+                                            input: "$prants",
+                                            as: "prant",
+                                            cond: { $eq: ["$$prant.kshetra_id", "$$kshetra._id"] },
+                                        },
+                                    },
+                                },
+                                prants: {
+                                    $map: {
+                                        input: {
+                                            $filter: {
+                                                input: "$prants",
+                                                as: "prant",
+                                                cond: { $eq: ["$$prant.kshetra_id", "$$kshetra._id"] },
+                                            },
+                                        },
+                                        as: "prant",
+                                        in: {
+                                            _id: "$$prant._id",
+                                            prant_name: "$$prant.prant_name",
+                                            total_vibhags: {
+                                                $size: {
+                                                    $filter: {
+                                                        input: "$vibhags",
+                                                        as: "vibhag",
+                                                        cond: { $eq: ["$$vibhag.prant_id", "$$prant._id"] },
+                                                    },
+                                                },
+                                            },
+                                            vibhags: {
+                                                $map: {
+                                                    input: {
+                                                        $filter: {
+                                                            input: "$vibhags",
+                                                            as: "vibhag",
+                                                            cond: { $eq: ["$$vibhag.prant_id", "$$prant._id"] },
+                                                        },
+                                                    },
+                                                    as: "vibhag",
+                                                    in: {
+                                                        _id: "$$vibhag._id",
+                                                        vibhag_name: "$$vibhag.vibhag_name",
+                                                        total_jilas: {
+                                                            $size: {
+                                                                $filter: {
+                                                                    input: "$jilas",
+                                                                    as: "jila",
+                                                                    cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                                                },
+                                                            },
+                                                        },
+                                                        jilas: {
+                                                            $map: {
+                                                                input: {
+                                                                    $filter: {
+                                                                        input: "$jilas",
+                                                                        as: "jila",
+                                                                        cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                                                    },
+                                                                },
+                                                                as: "jila",
+                                                                in: {
+                                                                    _id: "$$jila._id",
+                                                                    jila_name: "$$jila.jila_name",
+                                                                },
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        ]);
+
+        return res.status(200).json(hierarchyData);
+    } catch (error) {
+        console.error("Error fetching hierarchy:", error);
+        res.status(500).json({ error: error.message });
+    }
+};

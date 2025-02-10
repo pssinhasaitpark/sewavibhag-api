@@ -25,7 +25,7 @@ router.delete('/prant', data.deletePrant);
 
 router.get('/allVibhag', data.getAllVibhagList);
 
-
+router.get('/hierarchy', data.getHierarchy);
 
 
 
