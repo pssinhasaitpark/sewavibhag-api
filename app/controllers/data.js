@@ -1,5 +1,5 @@
 const { default: mongoose } = require('mongoose');
-const { Kshetra, Prant, Vibhag, Jila, kendra, kshetra, prant, vibhag } = require('../models');
+const { Kshetra, Prant, Vibhag, Jila, kendra, kshetra, prant, vibhag, jila } = require('../models');
 const { readFiles, successResponse, errorResponse } = require('../utils/helper');
 
 // Create Kendra (and other types like kendra, kshetra, prant, etc.)
@@ -189,3 +189,79 @@ exports.createVibhag = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+
+exports.getAllVibhagList = async (req, res) => {
+    try {
+        const vibhags = await vibhag.find();
+        return res.status(200).json(vibhags);
+    } catch (error) {
+        console.error("Error fetching Prant:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.createJila = async (req, res) => {
+    try {
+        const { type } = req.body;
+        const file = req.file;
+        const fileData = await readFiles(file);  // Get parsed CSV data from file
+
+        if (fileData.length === 0) {
+            return res.status(400).send('No valid data in the CSV file.');
+        }
+
+        let createdItems = [];
+
+        if (type === 'jila') {
+            const jilaData = fileData.map((row) => {
+                return {
+                    jila_name: row.Jila,
+                    vibhag_id: row.vibhag_id,
+                    prant_id: row.prant_id,
+                    kshetra_id: row.Kshetra_id,
+                    kendra_id: row.kendra_id ,
+                };
+            });
+
+            createdItems = await jila.insertMany(jilaData);
+            return res.status(201).json(createdItems);
+        }
+
+    } catch (error) {
+        console.error('Error during file processing:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.getJila = async (req, res) => {
+    try {
+        const { jila_id } = req.query;
+
+        if (!jila_id) {
+            return res.status(400).json({ error: "Jila ID is required." });
+        }
+
+        // Convert to ObjectId if needed
+        const query = mongoose.Types.ObjectId.isValid(jila_id)
+            ? { _id: new mongoose.Types.ObjectId(jila_id) }
+            : { _id: jila_id };
+
+        const jilaData = await jila.findOne(query)
+            .populate('vibhag_id', 'vibhag_name')  
+            .populate('prant_id', 'prant_name')   
+            .populate('kshetra_id', 'kshetra_name') 
+            .populate('kendra_id', 'kendra_name'); 
+
+        if (!jilaData) {
+            return res.status(404).json({ error: "Jila not found." });
+        }
+
+        return res.status(200).json(jilaData);
+    } catch (error) {
+        console.error("Error fetching Jila:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
