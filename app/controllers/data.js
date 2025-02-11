@@ -1,5 +1,5 @@
 const { default: mongoose } = require('mongoose');
-const { Kshetra, Prant, Vibhag, Jila, kendra, kshetra, prant, vibhag, jila } = require('../models');
+const { kendra, kshetra, prant, vibhag, jila } = require('../models');
 const { readFiles, successResponse, errorResponse } = require('../utils/helper');
 
 // Create Kendra (and other types like kendra, kshetra, prant, etc.)
@@ -223,7 +223,6 @@ exports.createJila = async (req, res) => {
                     kendra_id: row.kendra_id ,
                 };
             });
-
             createdItems = await jila.insertMany(jilaData);
             return res.status(201).json(createdItems);
         }
