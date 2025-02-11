@@ -1,76 +1,471 @@
-const { Kendra, Kshetra, Prant, Vibhag, Jila } = require('../models');
-const { readFiles } = require('../utils/helper');
+const { default: mongoose } = require('mongoose');
+const { kendra, kshetra, prant, vibhag, jila } = require('../models');
+const { readFiles, successResponse, errorResponse } = require('../utils/helper');
 
 // Create Kendra (and other types like kendra, kshetra, prant, etc.)
-exports.createKendra = async (req, res) => {
+exports.createKshetra = async (req, res) => {
     try {
         const { type } = req.body;
         const file = req.file;
         const fileData = await readFiles(file);  // Get parsed CSV data from file
-        
+
         if (fileData.length === 0) {
             return res.status(400).send('No valid data in the CSV file.');
         }
 
         let createdItems = [];
 
-        // Determine type and insert data accordingly
-        if (type === 'kendra') {
-            // Insert many Kendra records
-            const kendraData = fileData.map((row) => {
-                return { name: row.name }; // Assuming CSV column is 'name'
-            });
-            createdItems = await Kendra.insertMany(kendraData);
-            return res.status(201).json(createdItems);
-
-        } else if (type === 'kshetra') {
+        if (type === 'kshetra') {
             const kshetraData = fileData.map((row) => {
                 return {
-                    name: row.name, 
-                    kendraId: row.kendraId  // Assuming CSV column is 'kendraId'
+                    kshetra_name: row.Kshetra,
+                    kendra_id: row.kendra_id  // Assuming CSV column is 'kendraId'
                 };
             });
-            createdItems = await Kshetra.insertMany(kshetraData);
-            return res.status(201).json(createdItems);
 
-        } else if (type === 'prant') {
-            const prantData = fileData.map((row) => {
-                return {
-                    name: row.name,
-                    // kshetraId: row.kshetraId  // Assuming CSV column is 'kshetraId'
-                };
-            });
-            createdItems = await Prant.insertMany(prantData);
-            return res.status(201).json(createdItems);
-
-        } else if (type === 'vibhag') {
-            const vibhagData = fileData.map((row) => {
-                return {
-                    name: row.name,
-                    prantId: row.prantId  // Assuming CSV column is 'prantId'
-                };
-            });
-            createdItems = await Vibhag.insertMany(vibhagData);
-            return res.status(201).json(createdItems);
-
-        } else if (type === 'jila') {
-            const jilaData = fileData.map((row) => {
-                return {
-                    name: row.name,
-                    vibhagId: row.vibhagId,   // Assuming CSV column is 'vibhagId'
-                    prantId: row.prantId,     // Assuming CSV column is 'prantId'
-                    kshetraId: row.kshetraId, // Assuming CSV column is 'kshetraId'
-                    kendraId: row.kendraId,   // Assuming CSV column is 'kendraId'
-                    reportData: row.reportData // Assuming CSV column is 'reportData'
-                };
-            });
-            
-            createdItems = await Jila.insertMany(jilaData);
+            createdItems = await kshetra.insertMany(kshetraData);
             return res.status(201).json(createdItems);
         }
 
     } catch (error) {
         console.error('Error during file processing:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.create = async (req, res) => {
+    try {
+        const { kendra_name } = req.body;
+
+        const newKendra = new kendra({ kendra_name });
+        await newKendra.save();
+
+        successResponse(res, 'Kendra created successfully!', newKendra, 201);
+
+    } catch (error) {
+        errorResponse(res, error.message, 500,);
+    }
+};
+
+// Create Kendra (and other types like kendra, kshetra, prant, etc.)
+exports.createPrant = async (req, res) => {
+    try {
+        const { type } = req.body;
+        const file = req.file;
+        const fileData = await readFiles(file);  // Get parsed CSV data from file
+
+        if (fileData.length === 0) {
+            return res.status(400).send('No valid data in the CSV file.');
+        }
+
+        let createdItems = [];
+
+        if (type === 'prant') {
+            const prantData = fileData.map((row) => {
+                return {
+                    prant_name: row.Prant,
+                    kshetra_id: row.Kshetra_id,
+                    kendra_id: row.kendra_id  // Assuming CSV column is 'kendraId'
+                };
+            });
+
+            createdItems = await prant.insertMany(prantData);
+            return res.status(201).json(createdItems);
+        }
+
+    } catch (error) {
+        console.error('Error during file processing:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+// Get Prant based on Kshetra ID
+
+exports.getPrant = async (req, res) => {
+    try {
+        const { kshetra_id } = req.query;
+
+        if (!kshetra_id) {
+            return res.status(400).json({ error: "kshetra_id is required" });
+        }
+
+        // Convert to ObjectId if needed
+        const query = mongoose.Types.ObjectId.isValid(kshetra_id)
+            ? { kshetra_id: new mongoose.Types.ObjectId(kshetra_id) } : { kshetra_id };
+
+        const prants = await prant.find(query);
+
+        return res.status(200).json(prants);
+    } catch (error) {
+        console.error("Error fetching Prant:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Get Prant based on Kshetra ID
+
+exports.getAllPrantList = async (req, res) => {
+    try {
+        const prants = await prant.find();
+        return res.status(200).json(prants);
+    } catch (error) {
+        console.error("Error fetching Prant:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+
+exports.getKshetra = async (req, res) => {
+    try {
+
+        const getKshetraData = await kshetra.find();
+        return res.status(200).json(getKshetraData);
+    } catch (error) {
+        console.error("Error fetching Prant:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+exports.deletePrant = async (req, res) => {
+    try {
+        const { kshetra_id } = req.query;
+
+        if (!kshetra_id) {
+            return res.status(400).json({ error: "kshetra_id is required" });
+        }
+
+        // Convert to ObjectId if needed
+        const query = mongoose.Types.ObjectId.isValid(kshetra_id)
+            ? { kshetra_id: new mongoose.Types.ObjectId(kshetra_id) }
+            : { kshetra_id };
+
+        const result = await prant.deleteMany(query);
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: "No matching Prants found to delete" });
+        }
+
+        return res.status(200).json({
+            message: `${result.deletedCount} Prant(s) deleted successfully`,
+            deletedCount: result.deletedCount,
+        });
+    } catch (error) {
+        console.error("Error deleting Prant:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.createVibhag = async (req, res) => {
+    try {
+        const { type } = req.body;
+        const file = req.file;
+        const fileData = await readFiles(file);  // Get parsed CSV data from file
+
+        if (fileData.length === 0) {
+            return res.status(400).send('No valid data in the CSV file.');
+        }
+
+        let createdItems = [];
+
+        if (type === 'vibhag') {
+            const vibhagData = fileData.map((row) => {
+                return {
+                    vibhag_name: row.Vibhag,
+                    prant_id: row.prant_id,
+                    kshetra_id: row.Kshetra_id,
+                    kendra_id: row.kendra_id ,
+                };
+            });
+
+            createdItems = await vibhag.insertMany(vibhagData);
+            return res.status(201).json(createdItems);
+        }
+
+    } catch (error) {
+        console.error('Error during file processing:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+exports.getAllVibhagList = async (req, res) => {
+    try {
+        const vibhags = await vibhag.find();
+        return res.status(200).json(vibhags);
+    } catch (error) {
+        console.error("Error fetching Prant:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.createJila = async (req, res) => {
+    try {
+        const { type } = req.body;
+        const file = req.file;
+        const fileData = await readFiles(file);  // Get parsed CSV data from file
+
+        if (fileData.length === 0) {
+            return res.status(400).send('No valid data in the CSV file.');
+        }
+
+        let createdItems = [];
+
+        if (type === 'jila') {
+            const jilaData = fileData.map((row) => {
+                return {
+                    jila_name: row.Jila,
+                    vibhag_id: row.vibhag_id,
+                    prant_id: row.prant_id,
+                    kshetra_id: row.Kshetra_id,
+                    kendra_id: row.kendra_id ,
+                };
+            });
+            createdItems = await jila.insertMany(jilaData);
+            return res.status(201).json(createdItems);
+        }
+
+    } catch (error) {
+        console.error('Error during file processing:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.getJila = async (req, res) => {
+    try {
+        const { jila_id } = req.query;
+
+        if (!jila_id) {
+            return res.status(400).json({ error: "Jila ID is required." });
+        }
+
+        // Convert to ObjectId if valid
+        const objectId = mongoose.Types.ObjectId.isValid(jila_id) ? new mongoose.Types.ObjectId(jila_id) : jila_id;
+
+        const jilaData = await jila.aggregate([
+            { $match: { _id: objectId } }, // Filter by Jila ID
+            {
+                $lookup: {
+                    from: "vibhags",
+                    localField: "vibhag_id",
+                    foreignField: "_id",
+                    as: "vibhag"
+                }
+            },
+            {
+                $lookup: {
+                    from: "prants",
+                    localField: "prant_id",
+                    foreignField: "_id",
+                    as: "prant"
+                }
+            },
+            {
+                $lookup: {
+                    from: "kshetras",
+                    localField: "kshetra_id",
+                    foreignField: "_id",
+                    as: "kshetra"
+                }
+            },
+            {
+                $lookup: {
+                    from: "kendras",
+                    localField: "kendra_id",
+                    foreignField: "_id",
+                    as: "kendra"
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    jila_name: { $first: "$jila_name" },
+                    createdAt: { $first: "$createdAt" },
+                    updatedAt: { $first: "$updatedAt" },
+                    vibhag: { 
+                        $first: { 
+                            _id: { $arrayElemAt: ["$vibhag._id", 0] }, 
+                            name: { $arrayElemAt: ["$vibhag.vibhag_name", 0] }
+                        } 
+                    },
+                    prant: { 
+                        $first: { 
+                            _id: { $arrayElemAt: ["$prant._id", 0] }, 
+                            name: { $arrayElemAt: ["$prant.prant_name", 0] }
+                        } 
+                    },
+                    kshetra: { 
+                        $first: { 
+                            _id: { $arrayElemAt: ["$kshetra._id", 0] }, 
+                            name: { $arrayElemAt: ["$kshetra.kshetra_name", 0] }
+                        } 
+                    },
+                    kendra: { 
+                        $first: { 
+                            _id: { $arrayElemAt: ["$kendra._id", 0] }, 
+                            name: { $arrayElemAt: ["$kendra.kendra_name", 0] }
+                        } 
+                    }
+                }
+            }
+        ]);
+
+        if (!jilaData.length) {
+            return res.status(404).json({ error: "Jila not found." });
+        }
+
+        return res.status(200).json(jilaData[0]); // Return the grouped result
+    } catch (error) {
+        console.error("Error fetching Jila:", error);
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+
+
+exports.getHierarchy = async (req, res) => {
+    try {
+        const hierarchyData = await kendra.aggregate([
+            // Lookup Kshetra Data (Find Kshetras under Kendra)
+            {
+                $lookup: {
+                    from: "kshetras",
+                    localField: "_id",
+                    foreignField: "kendra_id",
+                    as: "kshetras",
+                },
+            },
+
+            // Lookup Prants for each Kshetra
+            {
+                $lookup: {
+                    from: "prants",
+                    localField: "kshetras._id",
+                    foreignField: "kshetra_id",
+                    as: "prants",
+                },
+            },
+
+            // Lookup Vibhags for each Prant
+            {
+                $lookup: {
+                    from: "vibhags",
+                    localField: "prants._id",
+                    foreignField: "prant_id",
+                    as: "vibhags",
+                },
+            },
+
+            // Lookup Jilas for each Vibhag
+            {
+                $lookup: {
+                    from: "jilas",
+                    localField: "vibhags._id",
+                    foreignField: "vibhag_id",
+                    as: "jilas",
+                },
+            },
+
+            // Restructure Data for Hierarchy
+            {
+                $project: {
+                    _id: 1,
+                    kendra_name: 1,
+                    total_kshetras: { $size: "$kshetras" }, // Count of Kshetras
+                    kshetras: {
+                        $map: {
+                            input: "$kshetras",
+                            as: "kshetra",
+                            in: {
+                                _id: "$$kshetra._id",
+                                kshetra_name: "$$kshetra.kshetra_name",
+                                total_prants: {
+                                    $size: {
+                                        $filter: {
+                                            input: "$prants",
+                                            as: "prant",
+                                            cond: { $eq: ["$$prant.kshetra_id", "$$kshetra._id"] },
+                                        },
+                                    },
+                                },
+                                prants: {
+                                    $map: {
+                                        input: {
+                                            $filter: {
+                                                input: "$prants",
+                                                as: "prant",
+                                                cond: { $eq: ["$$prant.kshetra_id", "$$kshetra._id"] },
+                                            },
+                                        },
+                                        as: "prant",
+                                        in: {
+                                            _id: "$$prant._id",
+                                            prant_name: "$$prant.prant_name",
+                                            total_vibhags: {
+                                                $size: {
+                                                    $filter: {
+                                                        input: "$vibhags",
+                                                        as: "vibhag",
+                                                        cond: { $eq: ["$$vibhag.prant_id", "$$prant._id"] },
+                                                    },
+                                                },
+                                            },
+                                            vibhags: {
+                                                $map: {
+                                                    input: {
+                                                        $filter: {
+                                                            input: "$vibhags",
+                                                            as: "vibhag",
+                                                            cond: { $eq: ["$$vibhag.prant_id", "$$prant._id"] },
+                                                        },
+                                                    },
+                                                    as: "vibhag",
+                                                    in: {
+                                                        _id: "$$vibhag._id",
+                                                        vibhag_name: "$$vibhag.vibhag_name",
+                                                        total_jilas: {
+                                                            $size: {
+                                                                $filter: {
+                                                                    input: "$jilas",
+                                                                    as: "jila",
+                                                                    cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                                                },
+                                                            },
+                                                        },
+                                                        jilas: {
+                                                            $map: {
+                                                                input: {
+                                                                    $filter: {
+                                                                        input: "$jilas",
+                                                                        as: "jila",
+                                                                        cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                                                    },
+                                                                },
+                                                                as: "jila",
+                                                                in: {
+                                                                    _id: "$$jila._id",
+                                                                    jila_name: "$$jila.jila_name",
+                                                                },
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        ]);
+
+        return res.status(200).json(hierarchyData);
+    } catch (error) {
+        console.error("Error fetching hierarchy:", error);
         res.status(500).json({ error: error.message });
     }
 };

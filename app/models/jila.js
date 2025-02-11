@@ -14,4 +14,5 @@ const jilaSchema = new Schema({
 });
 
 
-exports.Jila = mongoose.model('Jila', jilaSchema);
+const Jila = mongoose.model('Jila', jilaSchema);
+module.exports = Jila;
