@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser } = require('../controllers/user');
+const { registerUser, loginUser, me, updateUser } = require('../controllers/user');
 const { verifyToken, verifyRole } = require('../middlewares/JWTMiddleware');
 const { successResponse } = require('../utils/helper');
 
 // Public routes
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+router.get('/me',verifyToken, me);
+router.patch('/update', updateUser);
 
 // Protected route example
 router.get('/profile', verifyToken, (req, res) => {

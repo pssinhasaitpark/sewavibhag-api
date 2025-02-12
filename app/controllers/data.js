@@ -1,6 +1,7 @@
 const { default: mongoose } = require('mongoose');
 const { kendra, kshetra, prant, vibhag, jila } = require('../models');
 const { readFiles, successResponse, errorResponse } = require('../utils/helper');
+const Vibhag = require('../models/vibhag');
 
 // Create Kendra (and other types like kendra, kshetra, prant, etc.)
 exports.createKshetra = async (req, res) => {
@@ -116,7 +117,6 @@ exports.getAllPrantList = async (req, res) => {
 };
 
 
-
 exports.getKshetra = async (req, res) => {
     try {
 
@@ -176,7 +176,7 @@ exports.createVibhag = async (req, res) => {
                     vibhag_name: row.Vibhag,
                     prant_id: row.prant_id,
                     kshetra_id: row.Kshetra_id,
-                    kendra_id: row.kendra_id ,
+                    kendra_id: row.kendra_id,
                 };
             });
 
@@ -220,7 +220,7 @@ exports.createJila = async (req, res) => {
                     vibhag_id: row.vibhag_id,
                     prant_id: row.prant_id,
                     kshetra_id: row.Kshetra_id,
-                    kendra_id: row.kendra_id ,
+                    kendra_id: row.kendra_id,
                 };
             });
             createdItems = await jila.insertMany(jilaData);
@@ -284,29 +284,29 @@ exports.getJila = async (req, res) => {
                     jila_name: { $first: "$jila_name" },
                     createdAt: { $first: "$createdAt" },
                     updatedAt: { $first: "$updatedAt" },
-                    vibhag: { 
-                        $first: { 
-                            _id: { $arrayElemAt: ["$vibhag._id", 0] }, 
+                    vibhag: {
+                        $first: {
+                            _id: { $arrayElemAt: ["$vibhag._id", 0] },
                             name: { $arrayElemAt: ["$vibhag.vibhag_name", 0] }
-                        } 
+                        }
                     },
-                    prant: { 
-                        $first: { 
-                            _id: { $arrayElemAt: ["$prant._id", 0] }, 
+                    prant: {
+                        $first: {
+                            _id: { $arrayElemAt: ["$prant._id", 0] },
                             name: { $arrayElemAt: ["$prant.prant_name", 0] }
-                        } 
+                        }
                     },
-                    kshetra: { 
-                        $first: { 
-                            _id: { $arrayElemAt: ["$kshetra._id", 0] }, 
+                    kshetra: {
+                        $first: {
+                            _id: { $arrayElemAt: ["$kshetra._id", 0] },
                             name: { $arrayElemAt: ["$kshetra.kshetra_name", 0] }
-                        } 
+                        }
                     },
-                    kendra: { 
-                        $first: { 
-                            _id: { $arrayElemAt: ["$kendra._id", 0] }, 
+                    kendra: {
+                        $first: {
+                            _id: { $arrayElemAt: ["$kendra._id", 0] },
                             name: { $arrayElemAt: ["$kendra.kendra_name", 0] }
-                        } 
+                        }
                     }
                 }
             }
@@ -322,8 +322,6 @@ exports.getJila = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
-
-
 
 exports.getHierarchy = async (req, res) => {
     try {
@@ -464,6 +462,159 @@ exports.getHierarchy = async (req, res) => {
         ]);
 
         return res.status(200).json(hierarchyData);
+    } catch (error) {
+        console.error("Error fetching hierarchy:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+exports.getPrantAndVibahgsHierarchy = async (req, res) => {
+    try {
+        // Extract user_type, user_id, and user_type_id from query parameters
+        const { user_type, id, user_type_id } = req.user;
+
+        if (!user_type || !id || !user_type_id) {
+            return res.status(400).json({ error: 'Missing required query parameters: user_type, user_id, and user_type_id' });
+        }
+
+        let matchStage = {};
+        let projectStage = {};
+
+        // Handle filtering and projection for prant, vibhag, and jila models
+        if (user_type === 'prant') {
+            // If user is of type 'prant', filter by prant_id and include related vibhags and jilas
+            matchStage = { "_id": new mongoose.Types.ObjectId(user_type_id) };  // Assuming user_type_id corresponds to prant_id
+
+            projectStage = {
+                _id: 1,
+                prant_name: 1,
+                total_vibhags: {
+                    $size: {
+                        $filter: {
+                            input: "$vibhags",  // Assuming `vibhags` is an array of vibhags related to the prant
+                            as: "vibhag",
+                            cond: { $eq: ["$$vibhag.prant_id", new mongoose.Types.ObjectId(user_type_id)] },
+                        },
+                    },
+                },
+                vibhags: {
+                    $map: {
+                        input: {
+                            $filter: {
+                                input: "$vibhags",
+                                as: "vibhag",
+                                cond: { $eq: ["$$vibhag.prant_id", new mongoose.Types.ObjectId(user_type_id)] },
+                            },
+                        },
+                        as: "vibhag",
+                        in: {
+                            _id: "$$vibhag._id",
+                            vibhag_name: "$$vibhag.vibhag_name",
+                            total_jilas: {
+                                $size: {
+                                    $filter: {
+                                        input: "$jilas", // Assuming jilas are related to vibhags
+                                        as: "jila",
+                                        cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                    },
+                                },
+                            },
+                            jilas: {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: "$jilas",  // Assuming `jilas` is an array of jilas related to the vibhag
+                                            as: "jila",
+                                            cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                        },
+                                    },
+                                    as: "jila",
+                                    in: {
+                                        _id: "$$jila._id",
+                                        jila_name: "$$jila.jila_name",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+        }
+        else if (user_type === 'vibhag') {
+            // // If user is of type 'vibhag', filter by vibhag_id and include related jilas
+            // matchStage = { "_id": new mongoose.Types.ObjectId(user_type_id) };  // Assuming user_type_id corresponds to vibhag_id
+
+            // projectStage = {
+            //     _id: 1,
+            //     vibhag_name: 1,
+            //     total_jilas: {
+            //         $size: {
+            //             $filter: {
+            //                 input: "$jilas",  // Assuming jilas is an array in the vibhag model
+            //                 as: "jila",
+            //                 cond: { $eq: ["$$jila.vibhag_id", new mongoose.Types.ObjectId(user_type_id)] },
+            //             },
+            //         },
+            //     },
+            //     jilas: {
+            //         $map: {
+            //             input: {
+            //                 $filter: {
+            //                     input: "$jilas",
+            //                     as: "jila",
+            //                     cond: { $eq: ["$$jila.vibhag_id", new mongoose.Types.ObjectId(user_type_id)] },
+            //                 },
+            //             },
+            //             as: "jila",
+            //             in: {
+            //                 _id: "$$jila._id",
+            //                 jila_name: "$$jila.jila_name",
+            //             },
+            //         },
+            //     },
+            // };
+
+            // If user is of type 'vibhag', return jilas for the given vibhag_id
+            const jilas = await jila.find({ vibhag_id: user_type_id });
+
+            return res.status(200).json({
+                message: 'Jilas retrieved successfully!',
+                data: jilas,
+            });
+        }
+
+        // Perform aggregation on Prants, Vibhags, or Jilas
+        const hierarchyData = await prant.aggregate([
+            // Lookup Vibhags for each Prant
+            {
+                $lookup: {
+                    from: "vibhags",  // Separate collection for vibhags
+                    localField: "_id",  // This will link to prant_id
+                    foreignField: "prant_id", // Assuming prant_id is referenced in the vibhag model
+                    as: "vibhags",
+                },
+            },
+
+            // Lookup Jilas for each Vibhag
+            {
+                $lookup: {
+                    from: "jilas",  // Separate collection for jilas
+                    localField: "vibhags._id",  // This will link to vibhag_id
+                    foreignField: "vibhag_id", // Assuming vibhag_id is referenced in the jila model
+                    as: "jilas",
+                },
+            },
+
+            // Match user-related data based on user type
+            { $match: matchStage },
+
+            // Restructure the data based on user type
+            { $project: projectStage },
+        ]);
+
+        return res.status(200).json(hierarchyData);
+
     } catch (error) {
         console.error("Error fetching hierarchy:", error);
         res.status(500).json({ error: error.message });

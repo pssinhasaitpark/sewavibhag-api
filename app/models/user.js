@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    user_type_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+    },
 },
     {
         timestamps: true,

@@ -9,6 +9,8 @@ const userRegistrationSchema = Joi.object({
     email: Joi.string().email(),
     mobile: Joi.string().max(13).required(),
     password: Joi.string().min(8).required(),
+    user_type_id: Joi.string().max(50),  
+    
 });
 
 // Joi validation schema for user login

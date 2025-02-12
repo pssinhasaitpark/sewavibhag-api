@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const { ReportingForm } = require("../models/reportingForm");
 
 // POST: Create new reporting form entry
@@ -6,14 +7,18 @@ exports.createReportingForm = async (req, res) => {
         // Destructure the incoming request body
         const { mahanagar, jilaKendra, anyaNagar, villagesOver5000, villagesUnder5000 } = req.body;
 
-        // Create a new instance of the ReportingForm model
-        const newForm = new ReportingForm({
-            mahanagar,
-            jilaKendra,
-            anyaNagar,
-            villagesOver5000,
-            villagesUnder5000,
-        });
+        // Combine the form data with jila_id
+        const formData = { 
+            mahanagar, 
+            jilaKendra, 
+            anyaNagar, 
+            villagesOver5000, 
+            villagesUnder5000, 
+            user_type_id: new mongoose.Types.ObjectId(req.user.user_type_id),
+        };
+
+        // Create a new ReportingForm instance
+        const newForm = new ReportingForm(formData);
 
         // Save the new form data to the database
         const savedForm = await newForm.save();
@@ -30,13 +35,42 @@ exports.createReportingForm = async (req, res) => {
 };
 
 // GET: Fetch all reporting form entries
+exports.getReportingFormByJila = async (req, res) => {
+    try {
+        // Extract the jila_id from the URL parameters
+        const { user_type_id } = req.query;
 
-exports.getAllReportingForms = async (req, res) => {
+        if (!user_type_id) {
+            return res.status(400).json({ error: 'Missing required parameter: user_type_id' });
+        }
+
+        // Fetch the reporting form entry associated with the given jila_id
+        const form = await ReportingForm.findOne({ user_type_id: user_type_id });
+
+        if (!form) {
+            return res.status(404).json({ error: 'Reporting form not found for the given jila_id' });
+        }
+
+        // Send a success response with the fetched form 
+        res.status(200).json({
+            message: 'Reporting form fetched successfully',
+            data: form,
+        });
+    } catch (error) {
+        console.error('Error fetching form data:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+
+
+
+exports.getAll = async (req, res) => {
     try {
         // Fetch all form entries from the database
         const forms = await ReportingForm.find();
 
-        // Send a success response with the fetched forms
+        // Send a success response with the fetched forms 
         res.status(200).json({
             message: 'All form entries fetched successfully',
             data: forms,
@@ -46,6 +80,7 @@ exports.getAllReportingForms = async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
+
 
 // GET: Fetch a specific form by ID
 exports.getReportingFormById = async (req, res) => {
