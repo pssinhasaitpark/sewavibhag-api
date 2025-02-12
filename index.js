@@ -16,7 +16,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware setup for CORS
 app.use(cors({
-    origin: ["http://localhost:3000", "http://localhost:3001", 'https://sewavibhag-client.pages.dev','https://sewavibhage.netlify.app','https://sewavibhag.netlify.app'],
+    origin: ["http://localhost:3000", "http://localhost:3001", 'https://sewavibhag-client.pages.dev', 'https://sewavibhage.netlify.app', 'https://sewavibhag.netlify.app'
+        ,'http://192.168.0.123:3000','http://192.168.0.114:3000'
+    ],
     methods: ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
     credentials: true
 }));
@@ -41,7 +43,7 @@ app.get('/report-form', (req, res) => {
 });
 
 // API Routes
-app.use('/api/v1', routes);
+app.use('/api/v1', routes); 
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -52,7 +54,8 @@ app.use((err, req, res, next) => {
 // Create HTTP Server
 
 const port = process.env.PORT || 5000;
+const host = process.env.HOST || 'localhost';  // Default to 'localhost' if HOST is not provided
 
-app.listen(port, () => {
-    console.log(`🚀 Server is running on port ${port}`);
+app.listen(port, host, () => {
+    console.log(`🚀 Server is running on http://${host}:${port}`);
 });

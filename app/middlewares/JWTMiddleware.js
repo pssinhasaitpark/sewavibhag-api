@@ -1,18 +1,17 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
+const JWT_SECRET = `${process.env.JWT_SECRET}`;
 
 // Middleware to verify JWT token
 exports.verifyToken = (req, res, next) => {
-    const token = req.header('Authorization')?.split(' ')[1]; // Authorization: Bearer <token>
-
+    const token = req.header('Authorization')?.split(' ')[1];
     if (!token) {
-        return res.status(401).json({ message: 'Access denied. No token provided.' });
+        res.status(401).json({ message: 'Access denied. No token provided.' });
+        return
     }
-
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded; // Store decoded user info in the request object
+        req.user = decoded;
         next();
     } catch (error) {
         console.error(error);
@@ -47,4 +46,19 @@ exports.verifyRole = (requiredRoles) => {
     };
 };
 
+exports.authenticate = (req, res, next) => {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+        res.status(401).json({ message: 'Authorization token is required' });
+        return
+    }
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        console.log('Error verifying token:', error); // Log error
+        return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+};
 

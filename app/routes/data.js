@@ -27,6 +27,6 @@ router.get('/allVibhag', data.getAllVibhagList);
 
 router.get('/hierarchy', data.getHierarchy);
 
-
+router.get('/prantAndVibhag', data.getPrantAndVibahgsHierarchy);
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
 const reportingFormSchema = new mongoose.Schema(
   {
@@ -54,10 +55,13 @@ const reportingFormSchema = new mongoose.Schema(
       service_work_villages: { type: Number },
       total_service_work: { type: Number },
     },
+
+    user_type_id: { type: Schema.Types.ObjectId, ref: 'Users', },
+
   },
   {
     timestamps: true,
   }
 );
-    
+
 exports.ReportingForm = mongoose.model('ReportingForm', reportingFormSchema);
