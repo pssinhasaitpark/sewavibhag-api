@@ -6,8 +6,8 @@ const userSchema = new mongoose.Schema({
     user_type: {
         type: String,
         required: true,
-        enum: ['kendra', 'keshtra', 'prant', 'vibhag', 'jila'],
-        comment: 'kendra, keshtra, prant, vibhag, jila',
+        enum: ['kendra', 'kshetra', 'prant', 'vibhag', 'jila'],
+        comment: 'kendra, kshetra, prant, vibhag, jila',
     },
     user_name: {
         type: String,
@@ -36,6 +36,11 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true,
     },
+    level: {
+        type: Number,
+        required: true,
+        enum: [1, 2, 3],  // 1: Read-only, 2: Can create child users, 3: Can manage users
+    },
 },
     {
         timestamps: true,
@@ -43,7 +48,7 @@ const userSchema = new mongoose.Schema({
 
 // Middleware to hash the password before saving the user
 userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next(); // Only hash the password if it's modified
+    if (!this.isModified('password')) return next(); 
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();
@@ -57,4 +62,4 @@ userSchema.methods.comparePassword = function (password) {
 // Ensure you're exporting the model correctly
 const User = mongoose.model('User', userSchema);
 
-module.exports = User;  // Export the model as 'User'
+module.exports = User;  
