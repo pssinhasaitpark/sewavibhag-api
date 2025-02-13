@@ -56,7 +56,9 @@ const reportingFormSchema = new mongoose.Schema(
       total_service_work: { type: Number },
     },
 
-    user_type_id: { type: Schema.Types.ObjectId, ref: 'Users', },
+    jila_id: { type: Schema.Types.ObjectId, ref: 'Jilas', },
+    user_id: { type: Schema.Types.ObjectId, ref: 'Users', }, 
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'Users' },
 
   },
   {

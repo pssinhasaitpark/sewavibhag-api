@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { userRegistrationSchema, userLoginSchema } = require('./vailidators/usersValidaters');
 const { errorResponse, successResponse } = require('../utils/helper');
 const { Users, jila, prant, vibhag, kshetra } = require('../models');
+const { log } = require('node:console');
 
 const JWT_SECRET = `${process.env.JWT_SECRET}`;
 
@@ -82,7 +83,7 @@ exports.loginUser = async (req, res) => {
         }
 
         // Generate JWT token
-        const token = jwt.sign({ id: user._id, user_type: user.user_type, user_type_id: user.user_type_id }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user._id, user_type: user.user_type, user_type_id: user.user_type_id }, JWT_SECRET, { expiresIn: `${process.env.TOKENEXPIRE}` });
 
         successResponse(res, `${user.user_type} LoggedIn successfully!`, { token, user_type: user.user_type, user_type_id: user.user_type_id }, 200);
 
@@ -117,16 +118,12 @@ exports.me = async (req, res) => {
 
 
 exports.updateUser = async (req, res) => {
-    const { user_id, user_name, full_name, email, mobile, password, user_type, user_type_id } = req.body;
 
-    // Ensure user_id is present
-    if (!user_id) {
-        return errorResponse(res, 'Missing required field: user_id', 400);
-    }
-
+    const { user_name, full_name, email, mobile, password, user_type, user_type_id } = req.body;
+    
     try {
-        // Find the user by user_id
-        const user = await Users.findById(user_id);
+        // Find the user by user_id      
+        const user = await Users.findById(req.user.id);
         if (!user) {
             return errorResponse(res, 'User not found.', 404);
         }
