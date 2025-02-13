@@ -50,7 +50,7 @@ exports.getReportingFormByJila = async (req, res) => {
         const { jila_id } = req.query;
 
         if (!jila_id) {
-            return res.status(400).json({ error: 'Missing required parameter: user_type_id' });
+            return res.status(400).json({ error: 'Missing required parameter: jila_id' });
         }
 
         // Fetch the reporting form entry associated with the given jila_id
@@ -75,10 +75,7 @@ exports.getReportingFormByJila = async (req, res) => {
 exports.updateReportingForm = async (req, res) => {
     try {
         const userId = req.user.id; 
-        const { jila_id } = req.query; 
-
-        console.log("user>>", userId);
-        
+        const { jila_id } = req.query;     
 
         // Step 1: Find the form by jila_id
         const form = await ReportingForm.findOne({ jila_id });
