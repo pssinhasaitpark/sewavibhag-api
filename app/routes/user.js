@@ -8,7 +8,7 @@ const { successResponse } = require('../utils/helper');
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.get('/me',verifyToken, me);
-router.patch('/update', updateUser);
+router.patch('/update',verifyToken, updateUser);
 
 // Protected route example
 router.get('/profile', verifyToken, (req, res) => {

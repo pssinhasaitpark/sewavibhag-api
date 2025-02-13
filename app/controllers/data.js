@@ -1,7 +1,7 @@
 const { default: mongoose } = require('mongoose');
 const { kendra, kshetra, prant, vibhag, jila } = require('../models');
 const { readFiles, successResponse, errorResponse } = require('../utils/helper');
-const Vibhag = require('../models/vibhag');
+
 
 // Create Kendra (and other types like kendra, kshetra, prant, etc.)
 exports.createKshetra = async (req, res) => {
