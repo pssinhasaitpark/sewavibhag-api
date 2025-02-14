@@ -1,7 +1,11 @@
 const jwt = require('jsonwebtoken');
 const { userRegistrationSchema, userLoginSchema } = require('./vailidators/usersValidaters');
 const { errorResponse, successResponse } = require('../utils/helper');
-const { Users, jila, prant, vibhag, kshetra } = require('../models');
+const { Users, jila, kshetra, prant, vibhag } = require('../models');
+const Prant = require('../models/prant');
+const Vibhag = require('../models/vibhag');
+const Kshetra = require('../models/kshetra');
+const Jila = require('../models/jila');
 
 const JWT_SECRET = `${process.env.JWT_SECRET}`;
 
@@ -14,9 +18,9 @@ exports.registerUser = async (req, res) => {
 
     try {
         // Check if the username or mobile already exists
-        const existingUser = await Users.findOne({ user_name });
+        const existingUser = await Users.findOne({ user_name, email });
         if (existingUser) {
-            return errorResponse(res, 'User with this username already exists.', 400);
+            return errorResponse(res, 'User with this username or email already exists.', 400);
         }
 
         // Handle dynamic validation based on user_type and level
@@ -56,13 +60,13 @@ exports.registerUser = async (req, res) => {
                 // Level 1 of Kshetra cannot create any users
                 validationErrors.push('Kshetra level 1 users cannot create any users.');
             } else if (level === 2) {
-                
+
             }
         } else if (user_type === 'prant') {
             if (level === 1 || level === 2) {
                 // Level 1 of Prant can only view users
                 validationErrors.push('Prant level 1 & 2 users cannot create any users.');
-            }  else if (level === 3) {
+            } else if (level === 3) {
                 // Level 3 of Prant can create users for all levels (vibhag, jila)
             }
         } else if (user_type === 'vibhag') {
@@ -100,6 +104,7 @@ exports.registerUser = async (req, res) => {
 
 // User login
 exports.loginUser = async (req, res) => {
+
     const { error } = userLoginSchema.validate(req.body);
 
     if (error) return errorResponse(res, error.details[0].message, 400,);
@@ -142,8 +147,241 @@ exports.me = async (req, res) => {
         if (!user) {
             return errorResponse(res, "User not found", 404);
         }
-        // If user is found, send the user details
-        successResponse(res, "User details retrieved successfully!", { user }, 200);
+
+        // Initialize a response object to store user and associated data
+        let userDetails = { user };
+
+        // Handle different user types and perform lookups accordingly
+        if (user.user_type === "jila") {
+            // If user is a Jila, look up Kshetra, Prant, and Vibhag details
+            const jilaData = await jila.aggregate([
+                {
+                    $match: { _id: user.user_type_id },
+                },
+                {
+                    $lookup: {
+                        from: "kshetras",
+                        localField: "kshetra_id",
+                        foreignField: "_id",
+                        as: "kshetra",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "prants",
+                        localField: "prant_id",
+                        foreignField: "_id",
+                        as: "prant",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "vibhags",
+                        localField: "vibhag_id",
+                        foreignField: "_id",
+                        as: "vibhag",
+                    },
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        kshetra_name: { $arrayElemAt: ["$kshetra.kshetra_name", 0] },
+                        prant_name: { $arrayElemAt: ["$prant.prant_name", 0] },
+                        vibhag_name: { $arrayElemAt: ["$vibhag.vibhag_name", 0] },
+                        jila_name: 1,
+
+                    },
+                },
+            ]);
+
+            if (jilaData.length > 0) {
+                userDetails = { ...userDetails, ...jilaData[0] };
+            }
+        } else if (user.user_type === "vibhag") {
+            const vibhagData = await vibhag.aggregate([
+                {
+                    $match: { _id: user.user_type_id },
+                },
+                {
+                    $lookup: {
+                        from: "jilas",
+                        localField: "_id",
+                        foreignField: "vibhag_id",
+                        as: "jilas",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "kshetras",
+                        localField: "kshetra_id",
+                        foreignField: "_id",
+                        as: "kshetra",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "prants",
+                        localField: "prant_id",
+                        foreignField: "_id",
+                        as: "prant",
+                    },
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        vibhag_name: 1,
+                        kshetra_name: { $arrayElemAt: ["$kshetra.kshetra_name", 0] },
+                        prant_name: { $arrayElemAt: ["$prant.prant_name", 0] },
+                        total_jilas: { $size: "$jilas" },
+                    },
+                },
+            ]);
+        
+            if (vibhagData.length > 0) {
+                userDetails = { ...userDetails, ...vibhagData[0] };
+            }
+        
+        } else if (user.user_type === "prant") {
+            const prantData = await prant.aggregate([
+                {
+                    $match: { _id: user.user_type_id },
+                },
+                {
+                    $lookup: {
+                        from: "vibhags",
+                        localField: "_id",
+                        foreignField: "prant_id",
+                        as: "vibhags",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "jilas",
+                        localField: "_id",
+                        foreignField: "prant_id",
+                        as: "jilas",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "kshetras",
+                        localField: "kshetra_id",
+                        foreignField: "_id",
+                        as: "kshetra",
+                    },
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        prant_name: 1,
+                        kshetra_name: { $arrayElemAt: ["$kshetra.kshetra_name", 0] },
+                        total_vibhags: { $size: "$vibhags" },
+                        total_jilas: { $size: "$jilas" },
+                    },
+                },
+            ]);
+        
+            if (prantData.length > 0) {
+                userDetails = { ...userDetails, ...prantData[0] };
+            }
+        
+        } else if (user.user_type === "kshetra") {
+            const kshetraData = await kshetra.aggregate([
+                {
+                    $match: { _id: user.user_type_id },
+                },
+                {
+                    $lookup: {
+                        from: "prants",
+                        localField: "_id",
+                        foreignField: "kshetra_id",
+                        as: "prants",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "vibhags",
+                        localField: "_id",
+                        foreignField: "kshetra_id",
+                        as: "vibhags",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "jilas",
+                        localField: "_id",
+                        foreignField: "kshetra_id",
+                        as: "jilas",
+                    },
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        kshetra_name: 1,
+                        total_prants: { $size: "$prants" },
+                        total_vibhags: { $size: "$vibhags" },
+                        total_jilas: { $size: "$jilas" },
+                    },
+                },
+            ]);
+        
+            if (kshetraData.length > 0) {
+                userDetails = { ...userDetails, ...kshetraData[0] };
+            }
+    
+        } else if (user.user_type === "kendra") {
+            const kendraData = await kendra.aggregate([
+                {
+                    $lookup: {
+                        from: "kshetras",
+                        localField: "_id",
+                        foreignField: "kendra_id",
+                        as: "kshetras",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "prants",
+                        localField: "_id",
+                        foreignField: "kendra_id",
+                        as: "prants",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "vibhags",
+                        localField: "_id",
+                        foreignField: "kendra_id",
+                        as: "vibhags",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "jilas",
+                        localField: "_id",
+                        foreignField: "kendra_id",
+                        as: "jilas",
+                    },
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        kendra_name: "Akhil Bhartiya",
+                        total_kshetras: { $size: "$kshetras" },
+                        total_prants: { $size: "$prants" },
+                        total_vibhags: { $size: "$vibhags" },
+                        total_jilas: { $size: "$jilas" },
+                    },
+                },
+            ]);
+        
+            if (kendraData.length > 0) {
+                userDetails = { ...userDetails, ...kendraData[0] };
+            }
+        }
+
+        // Return the combined user details and associated data
+        successResponse(res, "User details retrieved successfully!", userDetails, 200);
 
     } catch (error) {
         // Handle unexpected errors and log for debugging
@@ -234,7 +472,7 @@ exports.updateUser = async (req, res) => {
         if (full_name) user.full_name = full_name;
         if (email) user.email = email;
         if (mobile) user.mobile = mobile;
-        if (level) user.level = level; // If allowed by level, update it.
+        if (level) user.level = level;
 
         // If a new password is provided, update it and it will be hashed in the pre-save hook
         if (password) user.password = password;
@@ -267,5 +505,91 @@ exports.updateUser = async (req, res) => {
     } catch (error) {
         console.error(error);
         errorResponse(res, 'An error occurred while updating the user.', 500, error.message);
+    }
+};
+
+exports.find = async (req, res) => {
+    try {
+        // Check if user is authenticated
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ message: "Unauthorized user" });
+        }
+
+        // Fetch logged-in user details
+        const loggedInUser = await Users.findById(req.user.id);
+        
+        if (!loggedInUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Initialize the query object
+        let query = { user_type: { $in: [] } };
+
+        // Depending on the user_type of logged-in user, modify the query to filter by user_type
+        switch (loggedInUser.user_type) {
+            case 'jila':
+                query.user_type.$in = ['jila'];
+                break;
+            case 'vibhag':
+                query.user_type.$in = ['vibhag', 'jila'];
+                break;
+            case 'prant':
+                query.user_type.$in = ['prant', 'vibhag', 'jila'];
+                break;
+            case 'kshetra':
+                query.user_type.$in = ['kshetra', 'prant', 'vibhag', 'jila'];
+                break;
+            case 'kendra':
+                query.user_type.$in = ['kendra', 'kshetra', 'prant', 'vibhag', 'jila'];
+                break;
+            default:
+                return res.status(400).json({ message: "Invalid user type" });
+        }
+
+        // Fetch users based on the query and their associated details (user_name, full_name, email, mobile, etc.)
+        const users = await Users.find(query).select('user_name full_name email mobile user_type_id level user_type ');
+
+        // Now, we need to get the particular names of Kshetra, Prant, Vibhag, Jila users.
+        const populatedUsers = await Promise.all(users.map(async (user) => {
+            let additionalData = {};
+
+            // Based on user_type, fetch relevant data
+            
+            switch (user.user_type) {
+                case 'kshetra':
+                    const kshetra = await Kshetra.findById(user.user_type_id).select('kshetra_name');
+                    additionalData.kshetra_name = kshetra ? kshetra.kshetra_name : 'Not available';
+                    break;
+                case 'prant':
+                    const prant = await Prant.findById(user.user_type_id).select('prant_name');
+                    additionalData.prant_name = prant ? prant.prant_name : 'Not available';
+                    break;
+                case 'vibhag':
+                    const vibhag = await Vibhag.findById(user.user_type_id).select('vibhag_name');
+                    additionalData.vibhag_name = vibhag ? vibhag.vibhag_name : 'Not available';
+                    break;
+                case 'jila':
+                    const jila = await Jila.findById(user.user_type_id).select('jila_name');
+                    additionalData.jila_name = jila ? jila.jila_name : 'Not available';
+                    break;
+                case 'kendra':
+                    additionalData.kendra_name = 'Akhil Bhartiya'; 
+                    break;
+                default:
+                    break;
+            }
+
+            return { ...user.toObject(), ...additionalData };  // Merge user details with the particular name
+        }));
+
+        // Return the populated user details
+        res.status(200).json({
+            message: "Users fetched successfully",
+            data: populatedUsers
+        });
+
+    } catch (error) {
+        console.error("Error retrieving users:", error);
+        res.status(500).json({ message: "Internal server error", error: error.message });
     }
 };

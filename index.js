@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Middleware setup for CORS
 app.use(cors({
     origin: ["http://localhost:3000", "http://localhost:3001", 'https://sewavibhag-client.pages.dev', 'https://sewavibhage.netlify.app', 'https://sewavibhag.netlify.app'
-        ,'http://192.168.0.123:3000','http://192.168.0.114:3000'
+        ,'http://192.168.0.123:3000','http://192.168.0.114:3000','http://192.168.0.114:3001'
     ],
     methods: ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
     credentials: true

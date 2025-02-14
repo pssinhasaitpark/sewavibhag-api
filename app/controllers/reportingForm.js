@@ -5,6 +5,11 @@ const { jila, Users } = require("../models");
 // POST: Create new reporting form entry
 exports.createReportingForm = async (req, res) => {
     try {
+        
+         // Check if the user level is 2
+        if (req.user.level !== 2) {
+            return res.status(403).json({ message: 'Unauthorized: Only Jila Level 2 users can create the form' });
+        }
 
         // Validate jila_id by checking if it exists in the Jilas collection
         const validJila = await jila.findById(req.user.user_type_id);
@@ -90,12 +95,19 @@ exports.updateReportingForm = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Check if user is either a Prant or Vibhag user
-        if (!(user.user_type === 'prant' || user.user_type === 'vibhag')) {
+        // Step 3: Check if the user is either a Prant or Vibhag user with level 2 or 3
+        if (user.user_type === 'prant') {
+            if (![2, 3].includes(req.user.level)) {
+                return res.status(403).json({ message: 'Unauthorized: Only Prant users with level 2 or 3 can update the form' });
+            }
+        } else if (user.user_type === 'vibhag') {
+            if (![2, 3].includes(req.user.level)) {
+                return res.status(403).json({ message: 'Unauthorized: Only Vibhag users with level 2 or 3 can update the form' });
+            }
+        } else {
             return res.status(403).json({ message: 'Unauthorized: Only Prant and Vibhag users can update the form' });
         }
-
-        // Step 3: Get the fields to update from the request body and match them with the existing structure
+        // Step 4: Get the fields to update from the request body and match them with the existing structure
         const updateData = {};
 
         // Ensure fields are only updated within the correct sections
@@ -104,51 +116,51 @@ exports.updateReportingForm = async (req, res) => {
         if (mahanagar) {
             // Validate and update only the `mahanagar` fields
             updateData.mahanagar = {
-                ...form.mahanagar, // Retain existing data
-                ...mahanagar, // Override only the fields provided in the request
+                ...form.mahanagar, 
+                ...mahanagar, 
             };
         }
 
         if (jilaKendra) {
             // Validate and update only the `jilaKendra` fields
             updateData.jilaKendra = {
-                ...form.jilaKendra, // Retain existing data
-                ...jilaKendra, // Override only the fields provided in the request
+                ...form.jilaKendra, 
+                ...jilaKendra, 
             };
         }
 
         if (anyaNagar) {
             // Validate and update only the `anyaNagar` fields
             updateData.anyaNagar = {
-                ...form.anyaNagar, // Retain existing data
-                ...anyaNagar, // Override only the fields provided in the request
+                ...form.anyaNagar, 
+                ...anyaNagar, 
             };
         }
 
         if (villagesOver5000) {
             // Validate and update only the `villagesOver5000` fields
             updateData.villagesOver5000 = {
-                ...form.villagesOver5000, // Retain existing data
-                ...villagesOver5000, // Override only the fields provided in the request
+                ...form.villagesOver5000, 
+                ...villagesOver5000, 
             };
         }
 
         if (villagesUnder5000) {
             // Validate and update only the `villagesUnder5000` fields
             updateData.villagesUnder5000 = {
-                ...form.villagesUnder5000, // Retain existing data
-                ...villagesUnder5000, // Override only the fields provided in the request
+                ...form.villagesUnder5000, 
+                ...villagesUnder5000, 
             };
         }
 
         // Include the updatedBy field
-        updateData.updatedBy = userId; // Add the user who is updating the form
+        updateData.updatedBy = userId; 
 
         // Step 4: Update the form with the new data (only modified fields)
         const updatedForm = await ReportingForm.findOneAndUpdate(
-            { jila_id }, // Find the form by jila_id
-            { $set: updateData }, // Only update the fields passed in the body
-            { new: true } // Return the updated document
+            { jila_id },
+            { $set: updateData }, 
+            { new: true } 
         );
 
         // Step 5: Send success response
@@ -162,7 +174,6 @@ exports.updateReportingForm = async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
-
 
 
 exports.getAll = async (req, res) => {

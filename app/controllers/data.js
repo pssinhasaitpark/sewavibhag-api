@@ -316,7 +316,7 @@ exports.getJila = async (req, res) => {
             return res.status(404).json({ error: "Jila not found." });
         }
 
-        return res.status(200).json(jilaData[0]); // Return the grouped result
+        return res.status(200).json(jilaData[0]); 
     } catch (error) {
         console.error("Error fetching Jila:", error);
         return res.status(500).json({ error: error.message });
@@ -363,6 +363,15 @@ exports.getHierarchy = async (req, res) => {
                     localField: "vibhags._id",
                     foreignField: "vibhag_id",
                     as: "jilas",
+                },
+            },
+             // Lookup Reporting Forms for each Jila
+             {
+                $lookup: {
+                    from: "reportingforms",
+                    localField: "jilas._id",
+                    foreignField: "jila_id",
+                    as: "reportingForms",
                 },
             },
 
@@ -445,7 +454,26 @@ exports.getHierarchy = async (req, res) => {
                                                                 in: {
                                                                     _id: "$$jila._id",
                                                                     jila_name: "$$jila.jila_name",
-                                                                },
+                                                                    reporting_form: {
+                                                                        $let: {
+                                                                            vars: {
+                                                                                reportingForm: {
+                                                                                    $arrayElemAt: [
+                                                                                        {
+                                                                                            $filter: {
+                                                                                                input: "$reportingForms",  // The field containing the reporting forms for jilas
+                                                                                                as: "form",
+                                                                                                cond: { $eq: ["$$form.jila_id", "$$jila._id"] }
+                                                                                            }
+                                                                                        },
+                                                                                        0
+                                                                                    ]
+                                                                                }
+                                                                            },
+                                                                            in: "$$reportingForm"
+                                                                        }
+                                                                    }
+                                                                }
                                                             },
                                                         },
                                                     },
@@ -460,7 +488,7 @@ exports.getHierarchy = async (req, res) => {
                 },
             },
         ]);
-
+        
         return res.status(200).json(hierarchyData);
     } catch (error) {
         console.error("Error fetching hierarchy:", error);
