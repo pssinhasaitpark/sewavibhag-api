@@ -10,7 +10,7 @@ const userRegistrationSchema = Joi.object({
     mobile: Joi.string().max(13).required(),
     password: Joi.string().min(8).required(),
     user_type_id: Joi.string().max(50),  
-    
+    level: Joi.number().valid(1, 2, 3).required()
 });
 
 // Joi validation schema for user login

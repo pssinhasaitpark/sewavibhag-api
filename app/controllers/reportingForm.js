@@ -1,12 +1,13 @@
 const { default: mongoose } = require("mongoose");
 const { ReportingForm } = require("../models/reportingForm");
 const { jila, Users } = require("../models");
+const logActivity = require('../utils/logger');
 
 // POST: Create new reporting form entry
 exports.createReportingForm = async (req, res) => {
     try {
-        
-         // Check if the user level is 2
+
+        // Check if the user level is 2
         if (req.user.level !== 2) {
             return res.status(403).json({ message: 'Unauthorized: Only Jila Level 2 users can create the form' });
         }
@@ -28,7 +29,7 @@ exports.createReportingForm = async (req, res) => {
             villagesOver5000,
             villagesUnder5000,
             jila_id: new mongoose.Types.ObjectId(req.user.user_type_id),
-            user_id : new mongoose.Types.ObjectId(req.user.user_id),
+            user_id: new mongoose.Types.ObjectId(req.user.user_id),
         };
 
         // Create a new ReportingForm instance
@@ -37,11 +38,23 @@ exports.createReportingForm = async (req, res) => {
         // Save the new form data to the database
         const savedForm = await newForm.save();
 
+        const logMessage = {
+            username: req.user.username,
+            user_type: req.user.user_type,
+            action: 'created_form',
+            ip_address: req.ip || req.connection.remoteAddress,
+            target_user: 'N/A',
+            target_form: savedForm._id.toString(),
+            user_level: req.user.level,
+            user_type_id:req.user.user_type_id,
+            timestamp: new Date().toISOString(),
+        };
+
+        // Log the activity (you can define logActivity to store the log in your database or file)
+        logActivity(logMessage);
+
         // Send a success response
-        res.status(201).json({
-            message: 'Form data successfully saved!',
-            data: savedForm,
-        });
+        res.status(201).json({ message: 'Form data successfully saved!', data: savedForm, });
     } catch (error) {
         console.error('Error saving form data:', error);
         res.status(500).json({ message: 'Server error', error });
@@ -79,8 +92,8 @@ exports.getReportingFormByJila = async (req, res) => {
 
 exports.updateReportingForm = async (req, res) => {
     try {
-        const userId = req.user.id; 
-        const { jila_id } = req.query;     
+        const userId = req.user.id;
+        const { jila_id } = req.query;
 
         // Step 1: Find the form by jila_id
         const form = await ReportingForm.findOne({ jila_id });
@@ -116,52 +129,68 @@ exports.updateReportingForm = async (req, res) => {
         if (mahanagar) {
             // Validate and update only the `mahanagar` fields
             updateData.mahanagar = {
-                ...form.mahanagar, 
-                ...mahanagar, 
+                ...form.mahanagar,
+                ...mahanagar,
             };
         }
 
         if (jilaKendra) {
             // Validate and update only the `jilaKendra` fields
             updateData.jilaKendra = {
-                ...form.jilaKendra, 
-                ...jilaKendra, 
+                ...form.jilaKendra,
+                ...jilaKendra,
             };
         }
 
         if (anyaNagar) {
             // Validate and update only the `anyaNagar` fields
             updateData.anyaNagar = {
-                ...form.anyaNagar, 
-                ...anyaNagar, 
+                ...form.anyaNagar,
+                ...anyaNagar,
             };
         }
 
         if (villagesOver5000) {
             // Validate and update only the `villagesOver5000` fields
             updateData.villagesOver5000 = {
-                ...form.villagesOver5000, 
-                ...villagesOver5000, 
+                ...form.villagesOver5000,
+                ...villagesOver5000,
             };
         }
 
         if (villagesUnder5000) {
             // Validate and update only the `villagesUnder5000` fields
             updateData.villagesUnder5000 = {
-                ...form.villagesUnder5000, 
-                ...villagesUnder5000, 
+                ...form.villagesUnder5000,
+                ...villagesUnder5000,
             };
         }
 
         // Include the updatedBy field
-        updateData.updatedBy = userId; 
+        updateData.updatedBy = userId;
 
         // Step 4: Update the form with the new data (only modified fields)
         const updatedForm = await ReportingForm.findOneAndUpdate(
             { jila_id },
-            { $set: updateData }, 
-            { new: true } 
+            { $set: updateData },
+            { new: true }
         );
+
+        // Log the activity (form update)
+        const logMessage = {
+            username: req.user.username,  
+            user_type: req.user.user_type,  
+            action: 'updated_form', 
+            ip_address: req.ip || req.connection.remoteAddress,  
+            target_user: 'N/A',  
+            target_form: updatedForm._id.toString(),  
+            user_level: req.user.level, 
+            user_type_id:req.user.user_type_id,
+            timestamp: new Date().toISOString(),  
+        };
+
+        // Log the activity (You can implement logActivity to save it in the database or file)
+        logActivity(logMessage);  
 
         // Step 5: Send success response
         res.status(200).json({
