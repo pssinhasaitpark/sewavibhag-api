@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const logActivity = require('../utils/logger');
 const { userRegistrationSchema, userLoginSchema } = require('./vailidators/usersValidaters');
 const { errorResponse, successResponse } = require('../utils/helper');
 const { Users, jila, kshetra, prant, vibhag } = require('../models');
@@ -7,17 +8,23 @@ const Vibhag = require('../models/vibhag');
 const Kshetra = require('../models/kshetra');
 const Jila = require('../models/jila');
 
+
 const JWT_SECRET = `${process.env.JWT_SECRET}`;
 
 // User registration
 exports.registerUser = async (req, res) => {
+    // Get user type and level from the token (req.user should be populated by your auth middleware)
+    const { user_type: currentUserType, level: currentUserLevel } = req.user;
+
+    // Validate incoming request data
     const { error } = userRegistrationSchema.validate(req.body);
-    if (error) return errorResponse(res, 'Validation failed', 400, error.details[0].message);
+
+    if (error) return errorResponse(res, error.details[0].message, 400,);
 
     const { user_name, full_name, email, mobile, password, user_type, user_type_id, level } = req.body;
 
     try {
-        // Check if the username or mobile already exists
+        // Check if the username or email already exists
         const existingUser = await Users.findOne({ user_name, email });
         if (existingUser) {
             return errorResponse(res, 'User with this username or email already exists.', 400);
@@ -52,35 +59,49 @@ exports.registerUser = async (req, res) => {
             }
         }
 
-        // Check if the user is creating users in the appropriate context based on their level
-        if (user_type === 'kendra' && level === 1) {
-            // Kendra can create users of all levels
-        } else if (user_type === 'kshetra') {
-            if (level === 1) {
-                // Level 1 of Kshetra cannot create any users
-                validationErrors.push('Kshetra level 1 users cannot create any users.');
-            } else if (level === 2) {
+        // Check if the user is creating users in the appropriate context based on their level and user type
+        let allowedToCreateUser = false;
 
+        // Handle the logic based on the current user's type and level
+        if (currentUserType === user_type) {
+            validationErrors.push('A user cannot create a user of the same type.');
+        } else if (currentUserType === 'kendra' && currentUserLevel === 1) {
+            // Kendra level 1 can create users of all types and levels
+            allowedToCreateUser = true;
+        } else if (currentUserType === 'kshetra') {
+            if (currentUserLevel === 1) {
+                // Kshetra level 1 cannot create any users
+                validationErrors.push('Kshetra level 1 users cannot create any users.');
+            } else if (currentUserLevel === 2) {
+                // Kshetra level 2 can create users only for Kshetra or lower levels
+                allowedToCreateUser = true;
             }
-        } else if (user_type === 'prant') {
-            if (level === 1 || level === 2) {
-                // Level 1 of Prant can only view users
+        } else if (currentUserType === 'prant') {
+            if (currentUserLevel === 1 || currentUserLevel === 2) {
+                // Prant level 1 & 2 can only view users
                 validationErrors.push('Prant level 1 & 2 users cannot create any users.');
-            } else if (level === 3) {
-                // Level 3 of Prant can create users for all levels (vibhag, jila)
+            } else if (currentUserLevel === 3) {
+                // Prant level 3 can create users for all levels (vibhag, jila)
+                allowedToCreateUser = true;
             }
-        } else if (user_type === 'vibhag') {
-            if (level === 1 || level === 2) {
-                // Level 1 of Vibhag can only view users
+        } else if (currentUserType === 'vibhag') {
+            if (currentUserLevel === 1 || currentUserLevel === 2) {
+                // Vibhag level 1 & 2 can only view users
                 validationErrors.push('Vibhag level 1 & 2 users cannot create any users.');
-            } else if (level === 3) {
-                // Level 3 of Vibhag can create users for all levels (jila)
+            } else if (currentUserLevel === 3) {
+                // Vibhag level 3 can create users for all levels (jila)
+                allowedToCreateUser = true;
             }
-        } else if (user_type === 'jila') {
-            if (level === 1 || level === 2) {
-                // Level 1 of Jila can only view users
+        } else if (currentUserType === 'jila') {
+            if (currentUserLevel === 1 || currentUserLevel === 2) {
+                // Jila level 1 & 2 can only view users
                 validationErrors.push('Jila level 1 & 2 users cannot create any users.');
             }
+        }
+
+        // Check if the current user is allowed to create a new user
+        if (!allowedToCreateUser) {
+            return errorResponse(res, 'You are not allowed to create users at your level.', 403);
         }
 
         // If there are validation errors, respond with them
@@ -95,9 +116,24 @@ exports.registerUser = async (req, res) => {
         const newUser = new Users(data);
         await newUser.save();
 
+        // Activity Logs
+        const logMessage = {
+            username: req.user.user_name,
+            user_type: req.user.user_type,
+            action: 'create_user',
+            ip_address: req.ip || req.connection.remoteAddress,
+            target_user: user_name,
+            target_form: 'N/A',
+            user_level: req.user.level,
+            user_type_id: req.user.user_type_id,
+            timestamp: new Date().toISOString(),
+        };
+
+        logActivity(logMessage);  // Log the activity
+
+        // Success response
         successResponse(res, 'User created successfully!', { user_name, full_name, email, mobile, user_type, user_type_id, level }, 201);
     } catch (error) {
-        console.error(error);
         errorResponse(res, error.message, 500);
     }
 };
@@ -124,9 +160,25 @@ exports.loginUser = async (req, res) => {
         }
 
         // Generate JWT token
-        const token = jwt.sign({ id: user._id, user_type: user.user_type, user_type_id: user.user_type_id, level: user.level, }, JWT_SECRET, { expiresIn: `${process.env.TOKENEXPIRE}` });
+        const token = jwt.sign({ id: user._id, user_name: user.user_name, user_type: user.user_type, user_type_id: user.user_type_id, level: user.level, }, JWT_SECRET, { expiresIn: `${process.env.TOKENEXPIRE}` });
 
-        successResponse(res, `${user.user_type} LoggedIn successfully!`, { token, user_type: user.user_type, user_type_id: user.user_type_id, level: user.level, }, 200);
+        // Activity log
+        const ip_address = req.ip || req.connection.remoteAddress;
+        const logMessage = {
+            username: user.user_name,
+            user_type: user.user_type,
+            user_level: user.level,
+            user_type_id: user.user_type_id,
+            action: 'login',
+            ip_address: ip_address,
+            target_user: 'N/A',
+            target_form: 'N/A',
+            timestamp: new Date().toISOString()
+        };
+
+        logActivity(logMessage);  // Log the login activity
+
+        successResponse(res, `${user.user_type} LoggedIn successfully!`, { token, user_name: user.user_name, user_type: user.user_type, user_type_id: user.user_type_id, level: user.level, }, 200);
 
     } catch (error) {
         errorResponse(res, 'An unexpected error occurred during login.', 500, error.message);
@@ -236,11 +288,11 @@ exports.me = async (req, res) => {
                     },
                 },
             ]);
-        
+
             if (vibhagData.length > 0) {
                 userDetails = { ...userDetails, ...vibhagData[0] };
             }
-        
+
         } else if (user.user_type === "prant") {
             const prantData = await prant.aggregate([
                 {
@@ -280,11 +332,11 @@ exports.me = async (req, res) => {
                     },
                 },
             ]);
-        
+
             if (prantData.length > 0) {
                 userDetails = { ...userDetails, ...prantData[0] };
             }
-        
+
         } else if (user.user_type === "kshetra") {
             const kshetraData = await kshetra.aggregate([
                 {
@@ -324,11 +376,11 @@ exports.me = async (req, res) => {
                     },
                 },
             ]);
-        
+
             if (kshetraData.length > 0) {
                 userDetails = { ...userDetails, ...kshetraData[0] };
             }
-    
+
         } else if (user.user_type === "kendra") {
             const kendraData = await kendra.aggregate([
                 {
@@ -374,7 +426,7 @@ exports.me = async (req, res) => {
                     },
                 },
             ]);
-        
+
             if (kendraData.length > 0) {
                 userDetails = { ...userDetails, ...kendraData[0] };
             }
@@ -517,7 +569,7 @@ exports.find = async (req, res) => {
 
         // Fetch logged-in user details
         const loggedInUser = await Users.findById(req.user.id);
-        
+
         if (!loggedInUser) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -554,7 +606,7 @@ exports.find = async (req, res) => {
             let additionalData = {};
 
             // Based on user_type, fetch relevant data
-            
+
             switch (user.user_type) {
                 case 'kshetra':
                     const kshetra = await Kshetra.findById(user.user_type_id).select('kshetra_name');
@@ -573,7 +625,7 @@ exports.find = async (req, res) => {
                     additionalData.jila_name = jila ? jila.jila_name : 'Not available';
                     break;
                 case 'kendra':
-                    additionalData.kendra_name = 'Akhil Bhartiya'; 
+                    additionalData.kendra_name = 'Akhil Bhartiya';
                     break;
                 default:
                     break;

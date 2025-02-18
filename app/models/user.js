@@ -39,7 +39,7 @@ const userSchema = new mongoose.Schema({
     level: {
         type: Number,
         required: true,
-        enum: [1, 2, 3],  // 1: Read-only, 2: Can create child users, 3: Can manage users
+        enum: [1, 2, 3],  
     },
 },
     {
