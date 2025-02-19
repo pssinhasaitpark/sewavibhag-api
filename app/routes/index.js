@@ -9,9 +9,9 @@ const activityLogMiddleware = require('../middlewares/activityLogMiddleware');
 const router = express.Router();
 
 // Attach the user routes
-router.use('/', activityLogMiddleware,userRoutes);
+router.use('/', userRoutes);
 router.use('/', authenticate, dataRoutes);
 router.use('/', authenticate, reportingFormRoutes);
-router.use('/', activityLogMiddleware, activityRoutes)
+router.use('/', activityRoutes)
 
 module.exports = router;
