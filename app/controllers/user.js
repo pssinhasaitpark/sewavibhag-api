@@ -7,6 +7,7 @@ const Prant = require('../models/prant');
 const Vibhag = require('../models/vibhag');
 const Kshetra = require('../models/kshetra');
 const Jila = require('../models/jila');
+const Kendra = require('../models/kendra');
 
 
 const JWT_SECRET = `${process.env.JWT_SECRET}`;
@@ -137,7 +138,6 @@ exports.registerUser = async (req, res) => {
         errorResponse(res, error.message, 500);
     }
 };
-
 // User login
 exports.loginUser = async (req, res) => {
 
@@ -181,7 +181,7 @@ exports.loginUser = async (req, res) => {
         successResponse(res, `${user.user_type} LoggedIn successfully!`, { token, user_name: user.user_name, user_type: user.user_type, user_type_id: user.user_type_id, level: user.level, }, 200);
 
     } catch (error) {
-        errorResponse(res, 'An unexpected error occurred during login.', 500, error.message);
+        errorResponse(res, error.message, 500,);
     }
 };
 
@@ -382,7 +382,7 @@ exports.me = async (req, res) => {
             }
 
         } else if (user.user_type === "kendra") {
-            const kendraData = await kendra.aggregate([
+            const kendraData = await Kendra.aggregate([
                 {
                     $lookup: {
                         from: "kshetras",
@@ -438,7 +438,7 @@ exports.me = async (req, res) => {
     } catch (error) {
         // Handle unexpected errors and log for debugging
         console.error("Error retrieving user profile:", error);
-        return errorResponse(res, "Internal server error", 500, error.message);
+        return errorResponse(res, error.message, 500,);
     }
 };
 
@@ -556,7 +556,7 @@ exports.updateUser = async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        errorResponse(res, 'An error occurred while updating the user.', 500, error.message);
+        errorResponse(res, error.message, 500,);
     }
 };
 
@@ -598,8 +598,19 @@ exports.find = async (req, res) => {
                 return res.status(400).json({ message: "Invalid user type" });
         }
 
-        // Fetch users based on the query and their associated details (user_name, full_name, email, mobile, etc.)
-        const users = await Users.find(query).select('user_name full_name email mobile user_type_id level user_type ');
+        // Pagination variables
+        const page = parseInt(req.query.page) || 1; 
+        const limit = parseInt(req.query.limit) || 50; 
+        const skip = (page - 1) * limit;
+
+        // Fetch users based on the query and pagination
+        const users = await Users.find(query)
+            .skip(skip)
+            .limit(limit)
+            .select('user_name full_name email mobile user_type_id level user_type ');
+
+        // Get the total count of users that match the query
+        const totalUsers = await Users.countDocuments(query);
 
         // Now, we need to get the particular names of Kshetra, Prant, Vibhag, Jila users.
         const populatedUsers = await Promise.all(users.map(async (user) => {
@@ -637,7 +648,13 @@ exports.find = async (req, res) => {
         // Return the populated user details
         res.status(200).json({
             message: "Users fetched successfully",
-            data: populatedUsers
+            data: populatedUsers,
+            pagination: {
+                totalUsers: totalUsers,
+                page: page,
+                limit: limit,
+                totalPages: Math.ceil(totalUsers / limit)
+            }
         });
 
     } catch (error) {

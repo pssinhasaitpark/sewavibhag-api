@@ -8,8 +8,9 @@ const Jila = require('../models/jila');
 
 exports.viewActivities = async (req, res) => {
     try {
-        // const currentUser = req.user;
-        const { action } = req.query;
+        
+        const currentUser = req.user;
+        const { action, page = 1 } = req.query;
 
         const filterCriteria = {};
 
@@ -18,7 +19,7 @@ exports.viewActivities = async (req, res) => {
         }
 
         // Handle user type based on roles and levels
-        /*
+
         if (currentUser.user_type === 'kendra') {
             if (currentUser.level === 1 || currentUser.level === 2) {
                 filterCriteria.user_type = ['kshetra', 'prant', 'vibhag', 'jila'];
@@ -46,7 +47,7 @@ exports.viewActivities = async (req, res) => {
         } else if (currentUser.user_type === 'jila') {
             return res.status(403).json({ message: 'Unauthorized: Jila users cannot view logs' });
         }
-*/
+
         // Read the log file
         fs.readFile(logsFilePath, 'utf8', async (err, data) => {
             if (err) {
@@ -108,11 +109,19 @@ exports.viewActivities = async (req, res) => {
                     filteredLogs.push(log);
                 }
             }
+            // Implement pagination (limit and skip)
+            const limit = 50;
+            const startIndex = (page - 1) * limit; 
+            const paginatedLogs = filteredLogs.slice(startIndex, startIndex + parseInt(limit));
 
-            // Return the filtered logs
+            // Return the paginated logs
             res.status(200).json({
                 message: 'Activity logs fetched successfully',
-                logs: filteredLogs
+                logs: paginatedLogs,
+                totalLogs: filteredLogs.length,
+                page: parseInt(page),
+                limit: limit,
+                totalPages: Math.ceil(filteredLogs.length / limit)
             });
         });
     } catch (error) {
