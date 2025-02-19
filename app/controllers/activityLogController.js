@@ -55,7 +55,7 @@ exports.viewActivities = async (req, res) => {
             }
 
             // Parse logs from file (assuming logs are stored as JSON objects in a newline-delimited format)
-            const logs = data.trim().split('\n').map(line => {
+            const logs = data.trim().split('\n')?.map(line => {
                 try {
                     return JSON.parse(line);
                 } catch (parseError) {
