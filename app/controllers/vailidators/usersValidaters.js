@@ -3,7 +3,7 @@ const Joi = require('joi');
 
 // Joi validation schema for user registration
 const userRegistrationSchema = Joi.object({
-    user_type: Joi.string().valid('kendra', 'keshtra', 'prant', 'vibhag', 'jila').required(),
+    user_type: Joi.string().valid('kendra', 'kshetra', 'prant', 'vibhag', 'jila').required(),
     user_name: Joi.string().max(50).required(),
     full_name: Joi.string().max(50).required(),
     email: Joi.string().email(),

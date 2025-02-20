@@ -8,7 +8,6 @@ const Jila = require('../models/jila');
 
 exports.viewActivities = async (req, res) => {
     try {
-        
         const currentUser = req.user;
         const { action, page = 1 } = req.query;
 
@@ -19,7 +18,6 @@ exports.viewActivities = async (req, res) => {
         }
 
         // Handle user type based on roles and levels
-
         if (currentUser.user_type === 'kendra') {
             if (currentUser.level === 1 || currentUser.level === 2) {
                 filterCriteria.user_type = ['kshetra', 'prant', 'vibhag', 'jila'];
@@ -54,7 +52,7 @@ exports.viewActivities = async (req, res) => {
                 return res.status(500).json({ message: 'Error reading log file', error: err });
             }
 
-            // Parse logs from file (assuming logs are stored as JSON objects in a newline-delimited format)
+            // Parse logs from file
             const logs = data.trim().split('\n')?.map(line => {
                 try {
                     return JSON.parse(line);
@@ -88,30 +86,36 @@ exports.viewActivities = async (req, res) => {
                 return name;
             };
 
-            // Filter logs and attach names based on user_type_id
-            const filteredLogs = [];
+            // Collect user type names
+            const userTypeIds = logs.map(log => log.message.user_type_id);
+            const uniqueUserTypeIds = [...new Set(userTypeIds)];
 
-            for (let log of logs) {
+            const userNames = await Promise.all(uniqueUserTypeIds.map(async user_type_id => {
+                const user = logs.find(log => log.message.user_type_id === user_type_id);
+                return await getUserTypeName(user.message.user_type, user_type_id);
+            }));
+
+            // Map the user names to logs
+            logs.forEach(log => {
+                const userTypeName = userNames.find(name => name.user_type_id === log.message.user_type_id);
+                log.message.user_field_name = userTypeName || 'N/A';
+            });
+
+            // Filter logs based on criteria
+            const filteredLogs = logs.filter(log => {
                 let matches = true;
-
                 if (filterCriteria.action && log.message.action !== filterCriteria.action) {
                     matches = false;
                 }
-
                 if (filterCriteria.user_type && !filterCriteria.user_type.includes(log.message.user_type)) {
                     matches = false;
                 }
+                return matches;
+            });
 
-                if (matches) {
-                    // Get the user name based on the user type and user_type_id
-                    const userTypeName = await getUserTypeName(log.message.user_type, log.message.user_type_id);
-                    log.message.user_field_name = userTypeName; // Add the name to the log
-                    filteredLogs.push(log);
-                }
-            }
-            // Implement pagination (limit and skip)
+            // Pagination
             const limit = 50;
-            const startIndex = (page - 1) * limit; 
+            const startIndex = (page - 1) * limit;
             const paginatedLogs = filteredLogs.slice(startIndex, startIndex + parseInt(limit));
 
             // Return the paginated logs
@@ -129,5 +133,3 @@ exports.viewActivities = async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
-
-
