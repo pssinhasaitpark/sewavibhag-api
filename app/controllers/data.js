@@ -617,9 +617,9 @@ exports.getPrantAndVibahgsHierarchy = async (req, res) => {
             // Lookup Vibhags for each Prant
             {
                 $lookup: {
-                    from: "vibhags",  // Separate collection for vibhags
-                    localField: "_id",  // This will link to prant_id
-                    foreignField: "prant_id", // Assuming prant_id is referenced in the vibhag model
+                    from: "vibhags",  
+                    localField: "_id",  
+                    foreignField: "prant_id", 
                     as: "vibhags",
                 },
             },
@@ -627,9 +627,9 @@ exports.getPrantAndVibahgsHierarchy = async (req, res) => {
             // Lookup Jilas for each Vibhag
             {
                 $lookup: {
-                    from: "jilas",  // Separate collection for jilas
-                    localField: "vibhags._id",  // This will link to vibhag_id
-                    foreignField: "vibhag_id", // Assuming vibhag_id is referenced in the jila model
+                    from: "jilas",  
+                    localField: "vibhags._id",  
+                    foreignField: "vibhag_id",
                     as: "jilas",
                 },
             },
@@ -648,3 +648,4 @@ exports.getPrantAndVibahgsHierarchy = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
