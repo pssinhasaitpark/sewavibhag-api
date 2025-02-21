@@ -8,6 +8,7 @@ const Vibhag = require('../models/vibhag');
 const Kshetra = require('../models/kshetra');
 const Jila = require('../models/jila');
 const Kendra = require('../models/kendra');
+const emailMiddleware = require('../middlewares/emailMiddleware');
 
 
 const JWT_SECRET = `${process.env.JWT_SECRET}`;
@@ -129,8 +130,15 @@ exports.registerUser = async (req, res) => {
             user_type_id: req.user.user_type_id,
             timestamp: new Date().toISOString(),
         };
+        
+        // Log the activity
+        logActivity(logMessage);  
 
-        logActivity(logMessage);  // Log the activity
+         // Attach user details to req for email middleware
+         req.userDetails = { user_name, full_name, email, mobile, user_type, password, level };
+
+         // Call the email middleware
+         emailMiddleware(req, res);
 
         // Success response
         successResponse(res, 'User created successfully!', { user_name, full_name, email, mobile, user_type, user_type_id, level }, 201);
