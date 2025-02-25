@@ -82,7 +82,6 @@ exports.createPrant = async (req, res) => {
 
 
 // Get Prant based on Kshetra ID
-
 exports.getPrant = async (req, res) => {
     try {
         const { kshetra_id } = req.query;
@@ -105,7 +104,6 @@ exports.getPrant = async (req, res) => {
 };
 
 // Get Prant based on Kshetra ID
-
 exports.getAllPrantList = async (req, res) => {
     try {
         const prants = await prant.find();
@@ -495,7 +493,6 @@ exports.getHierarchy = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
 
 exports.getPrantAndVibahgsHierarchy = async (req, res) => {
     try {
