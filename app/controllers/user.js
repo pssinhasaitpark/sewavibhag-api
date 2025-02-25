@@ -130,15 +130,15 @@ exports.registerUser = async (req, res) => {
             user_type_id: req.user.user_type_id,
             timestamp: new Date().toISOString(),
         };
-        
+
         // Log the activity
-        logActivity(logMessage);  
+        logActivity(logMessage);
 
-         // Attach user details to req for email middleware
-         req.userDetails = { user_name, full_name, email, mobile, user_type, password, level };
+        // Attach user details to req for email middleware
+        req.userDetails = { user_name, full_name, email, mobile, user_type, password, level };
 
-         // Call the email middleware
-         emailMiddleware(req, res);
+        // Call the email middleware
+        emailMiddleware(req, res);
 
         // Success response
         successResponse(res, 'User created successfully!', { user_name, full_name, email, mobile, user_type, user_type_id, level }, 201);
@@ -208,8 +208,24 @@ exports.me = async (req, res) => {
             return errorResponse(res, "User not found", 404);
         }
 
+        let userLevel;
+        switch (user.level) {
+            case 1:
+                userLevel = 'viewer';
+                break;
+            case 2:
+                userLevel = 'editor';
+                break;
+            case 3:
+                userLevel = 'admin';
+                break;
+            default:
+                userLevel = 'Unknown'; // In case the level is not 1, 2, or 3
+                break;
+        }
+
         // Initialize a response object to store user and associated data
-        let userDetails = { user };
+        let userDetails = { ...user.toObject(), level: userLevel };    
 
         // Handle different user types and perform lookups accordingly
         if (user.user_type === "jila") {
@@ -607,8 +623,8 @@ exports.find = async (req, res) => {
         }
 
         // Pagination variables
-        const page = parseInt(req.query.page) || 1; 
-        const limit = parseInt(req.query.limit) || 50; 
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
         // Fetch users based on the query and pagination
@@ -623,9 +639,24 @@ exports.find = async (req, res) => {
         // Now, we need to get the particular names of Kshetra, Prant, Vibhag, Jila users.
         const populatedUsers = await Promise.all(users.map(async (user) => {
             let additionalData = {};
-
+        
+            // Modify the level field based on its value
+            switch (user.level) {
+                case 1:
+                    additionalData.level = 'viewer';
+                    break;
+                case 2:
+                    additionalData.level = 'editor';
+                    break;
+                case 3:
+                    additionalData.level = 'admin';
+                    break;
+                default:
+                    additionalData.level = 'Unknown'; // In case the level is not 1, 2, or 3
+                    break;
+            }
+        
             // Based on user_type, fetch relevant data
-
             switch (user.user_type) {
                 case 'kshetra':
                     const kshetra = await Kshetra.findById(user.user_type_id).select('kshetra_name');
@@ -649,10 +680,10 @@ exports.find = async (req, res) => {
                 default:
                     break;
             }
-
+        
             return { ...user.toObject(), ...additionalData };  // Merge user details with the particular name
         }));
-
+        
         // Return the populated user details
         res.status(200).json({
             message: "Users fetched successfully",
