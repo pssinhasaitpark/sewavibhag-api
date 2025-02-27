@@ -646,3 +646,224 @@ exports.getPrantAndVibahgsHierarchy = async (req, res) => {
     }
 };
 
+
+exports.getkshetraHierarchy = async (req, res) => {
+    try {
+        // Extract user_type, user_id, and user_type_id from query parameters
+        const { user_type, id, user_type_id } = req.user;
+
+        if (!user_type || !id || !user_type_id) {
+            return res.status(400).json({ error: 'Missing required query parameters: user_type, user_id, and user_type_id' });
+        }
+
+        let matchStage = {};
+        let projectStage = {};
+
+        // Handle filtering and projection for kshetra, prant, vibhag, and jila models
+        if (user_type === 'kshetra') {
+            // If user is of type 'kshetra', filter by kshetra_id and include related prants, vibhags, and jilas
+            matchStage = { "_id": new mongoose.Types.ObjectId(user_type_id) };  // Assuming user_type_id corresponds to kshetra_id
+
+            projectStage = {
+                _id: 1,
+                kshetra_name: 1,
+                total_prants: {
+                    $size: {
+                        $filter: {
+                            input: "$prants",  // Assuming `prants` is an array of prants related to the kshetra
+                            as: "prant",
+                            cond: { $eq: ["$$prant.kshetra_id", new mongoose.Types.ObjectId(user_type_id)] },
+                        },
+                    },
+                },
+                prants: {
+                    $map: {
+                        input: {
+                            $filter: {
+                                input: "$prants", 
+                                as: "prant",
+                                cond: { $eq: ["$$prant.kshetra_id", new mongoose.Types.ObjectId(user_type_id)] },
+                            },
+                        },
+                        as: "prant",
+                        in: {
+                            _id: "$$prant._id",
+                            prant_name: "$$prant.prant_name",
+                            total_vibhags: {
+                                $size: {
+                                    $filter: {
+                                        input: "$vibhags", 
+                                        as: "vibhag",
+                                        cond: { $eq: ["$$vibhag.prant_id", "$$prant._id"] },
+                                    },
+                                },
+                            },
+                            vibhags: {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: "$vibhags", 
+                                            as: "vibhag",
+                                            cond: { $eq: ["$$vibhag.prant_id", "$$prant._id"] },
+                                        },
+                                    },
+                                    as: "vibhag",
+                                    in: {
+                                        _id: "$$vibhag._id",
+                                        vibhag_name: "$$vibhag.vibhag_name",
+                                        total_jilas: {
+                                            $size: {
+                                                $filter: {
+                                                    input: "$jilas", 
+                                                    as: "jila",
+                                                    cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                                },
+                                            },
+                                        },
+                                        jilas: {
+                                            $map: {
+                                                input: {
+                                                    $filter: {
+                                                        input: "$jilas",  
+                                                        as: "jila",
+                                                        cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                                    },
+                                                },
+                                                as: "jila",
+                                                in: {
+                                                    _id: "$$jila._id",
+                                                    jila_name: "$$jila.jila_name",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+        }
+        else if (user_type === 'prant') {
+            // If user is of type 'prant', filter by prant_id and include related vibhags and jilas
+            matchStage = { "_id": new mongoose.Types.ObjectId(user_type_id) };  // Assuming user_type_id corresponds to prant_id
+
+            projectStage = {
+                _id: 1,
+                prant_name: 1,
+                total_vibhags: {
+                    $size: {
+                        $filter: {
+                            input: "$vibhags", 
+                            as: "vibhag",
+                            cond: { $eq: ["$$vibhag.prant_id", new mongoose.Types.ObjectId(user_type_id)] },
+                        },
+                    },
+                },
+                vibhags: {
+                    $map: {
+                        input: {
+                            $filter: {
+                                input: "$vibhags", 
+                                as: "vibhag",
+                                cond: { $eq: ["$$vibhag.prant_id", new mongoose.Types.ObjectId(user_type_id)] },
+                            },
+                        },
+                        as: "vibhag",
+                        in: {
+                            _id: "$$vibhag._id",
+                            vibhag_name: "$$vibhag.vibhag_name",
+                            total_jilas: {
+                                $size: {
+                                    $filter: {
+                                        input: "$jilas", 
+                                        as: "jila",
+                                        cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                    },
+                                },
+                            },
+                            jilas: {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: "$jilas", 
+                                            as: "jila",
+                                            cond: { $eq: ["$$jila.vibhag_id", "$$vibhag._id"] },
+                                        },
+                                    },
+                                    as: "jila",
+                                    in: {
+                                        _id: "$$jila._id",
+                                        jila_name: "$$jila.jila_name",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+            
+        }
+        
+        else if (user_type === 'vibhag') {
+            // If user is of type 'vibhag', return jilas for the given vibhag_id
+            const jilas = await jila.find({ vibhag_id: user_type_id });
+
+            return res.status(200).json({
+                message: 'Jilas retrieved successfully!',
+                data: jilas,
+            });
+        }
+
+        // Perform aggregation on Kshetras, Prants, Vibhags, or Jilas
+        const hierarchyData = await kshetra.aggregate([
+            // Lookup Prants for each Kshetra
+            {
+                $lookup: {
+                    from: "prants",  
+                    localField: "_id",  
+                    foreignField: "kshetra_id", 
+                    as: "prants",
+                },
+            },
+
+                // Lookup Vibhags for each Prant
+                {
+                    $lookup: {
+                        from: "vibhags",  
+                        localField: "prants._id",  
+                        foreignField: "prant_id", 
+                        as: "vibhags",
+                    },
+                },
+
+                // Lookup Jilas for each Vibhag
+                {
+                    $lookup: {
+                        from: "jilas",  
+                        localField: "vibhags._id",  
+                        foreignField: "vibhag_id", 
+                        as: "jilas",
+                    },
+                },
+
+                // Match user-related data based on user type
+                { $match: matchStage },
+
+                // Restructure the data based on user type
+                { $project: projectStage },
+            ]);
+
+        return res.status(200).json(hierarchyData);
+
+    } catch (error) {
+        console.error("Error fetching hierarchy:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+
+
+
+

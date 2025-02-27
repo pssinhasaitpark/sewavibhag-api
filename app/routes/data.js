@@ -29,6 +29,8 @@ router.get('/hierarchy', data.getHierarchy);
 
 router.get('/prantAndVibhag', data.getPrantAndVibahgsHierarchy);
 
+router.get('/kshetraHierarchy', data.getkshetraHierarchy);
+
 
 
 module.exports = router;
