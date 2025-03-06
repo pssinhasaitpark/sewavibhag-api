@@ -20,7 +20,7 @@ exports.createKshetra = async (req, res) => {
             const kshetraData = fileData.map((row) => {
                 return {
                     kshetra_name: row.Kshetra,
-                    kendra_id: row.kendra_id  // Assuming CSV column is 'kendraId'
+                    kendra_id: row.kendra_id 
                 };
             });
 
@@ -645,7 +645,6 @@ exports.getPrantAndVibahgsHierarchy = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
 
 exports.getkshetraHierarchy = async (req, res) => {
     try {
