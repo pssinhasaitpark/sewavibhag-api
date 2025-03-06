@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { registerUser, loginUser, me, updateUser, find } = require('../controllers/user');
-const { verifyToken, verifyRole, authenticate } = require('../middlewares/JWTMiddleware');
-const { successResponse } = require('../utils/helper');
+const { verifyToken, authenticate } = require('../middlewares/JWTMiddleware');
 const activityLogMiddleware = require('../middlewares/activityLogMiddleware');
 
 // Public routes

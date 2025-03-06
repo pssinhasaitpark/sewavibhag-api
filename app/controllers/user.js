@@ -466,7 +466,6 @@ exports.me = async (req, res) => {
     }
 };
 
-
 exports.updateUser = async (req, res) => {
     const { user_name, full_name, email, mobile, password, user_type, user_type_id, level } = req.body;
 
