@@ -1,16 +1,16 @@
 const jwt = require('jsonwebtoken');
 const logActivity = require('../utils/logger');
 const { userRegistrationSchema, userLoginSchema } = require('./vailidators/usersValidaters');
-const { errorResponse, successResponse } = require('../utils/helper');
-const { Users, jila, kshetra, prant, vibhag } = require('../models');
+const { errorResponse, successResponse, mapLevel } = require('../utils/helper');
+const { Users, jila, kshetra, prant, vibhag, kendra } = require('../models');
+const bcrypt = require('bcrypt');
 const Prant = require('../models/prant');
 const Vibhag = require('../models/vibhag');
 const Kshetra = require('../models/kshetra');
 const Jila = require('../models/jila');
 const Kendra = require('../models/kendra');
 const emailMiddleware = require('../middlewares/emailMiddleware');
-
-
+const User = require('../models/user');
 const JWT_SECRET = `${process.env.JWT_SECRET}`;
 
 // User registration
@@ -135,13 +135,14 @@ exports.registerUser = async (req, res) => {
         logActivity(logMessage);
 
         // Attach user details to req for email middleware
-        req.userDetails = { user_name, full_name, email, mobile, user_type, password, level };
+        const user_level = mapLevel(level , user_type);
+        req.userDetails = { user_name, full_name, email, mobile, user_type, password, level : user_level };
 
         // Call the email middleware
         emailMiddleware(req, res);
 
         // Success response
-        successResponse(res, 'User created successfully!', { user_name, full_name, email, mobile, user_type, user_type_id, level }, 201);
+        successResponse(res, 'User created successfully!', { user_name, full_name, email, mobile, user_type, user_type_id, level :user_level}, 201);
     } catch (error) {
         errorResponse(res, error.message, 500);
     }
@@ -201,31 +202,18 @@ exports.me = async (req, res) => {
         }
 
         // Fetch user details
-        const user = await Users.findOne({ _id: req.user.id });
+        const user = await Users.findOne({ _id: req.user.id }).select('-password');;
 
         // Handle case where user is not found
         if (!user) {
             return errorResponse(res, "User not found", 404);
         }
 
-        let userLevel;
-        switch (user.level) {
-            case 1:
-                userLevel = 'viewer';
-                break;
-            case 2:
-                userLevel = 'editor';
-                break;
-            case 3:
-                userLevel = 'admin';
-                break;
-            default:
-                userLevel = 'Unknown'; // In case the level is not 1, 2, or 3
-                break;
-        }
+        let userLevel = mapLevel(user.level, user.user_type)
+
 
         // Initialize a response object to store user and associated data
-        let userDetails = { ...user.toObject(), level: userLevel };    
+        let userDetails = { ...user.toObject(), level: userLevel };
 
         // Handle different user types and perform lookups accordingly
         if (user.user_type === "jila") {
@@ -638,23 +626,10 @@ exports.find = async (req, res) => {
         // Now, we need to get the particular names of Kshetra, Prant, Vibhag, Jila users.
         const populatedUsers = await Promise.all(users.map(async (user) => {
             let additionalData = {};
-        
-            // Modify the level field based on its value
-            switch (user.level) {
-                case 1:
-                    additionalData.level = 'viewer';
-                    break;
-                case 2:
-                    additionalData.level = 'editor';
-                    break;
-                case 3:
-                    additionalData.level = 'admin';
-                    break;
-                default:
-                    additionalData.level = 'Unknown'; // In case the level is not 1, 2, or 3
-                    break;
-            }
-        
+
+            additionalData.level = mapLevel(user.level, user.user_type);
+
+
             // Based on user_type, fetch relevant data
             switch (user.user_type) {
                 case 'kshetra':
@@ -679,24 +654,128 @@ exports.find = async (req, res) => {
                 default:
                     break;
             }
-        
-            return { ...user.toObject(), ...additionalData };  // Merge user details with the particular name
+
+            return { ...user.toObject(), ...additionalData };
         }));
-        
+
         // Return the populated user details
         res.status(200).json({
             message: "Users fetched successfully",
             data: populatedUsers,
-            pagination: {
-                totalUsers: totalUsers,
-                page: page,
-                limit: limit,
-                totalPages: Math.ceil(totalUsers / limit)
-            }
+            pagination: { totalUsers: totalUsers, page: page, limit: limit, totalPages: Math.ceil(totalUsers / limit) }
         });
 
     } catch (error) {
         console.error("Error retrieving users:", error);
         res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+};
+
+//create first user
+exports.createKendraUser = async (req, res) => {
+
+    const { user_name, full_name, email, mobile, password, user_type, user_type_id, level } = req.body;
+
+    // Validate incoming request data
+    const { error } = userRegistrationSchema.validate(req.body);
+    if (error) return errorResponse(res, error.details[0].message, 400,);
+
+
+    try {
+        // Check if the username or email already exists
+        const existingUser = await Users.findOne({ user_name, email });
+        if (existingUser) {
+            return errorResponse(res, 'User with this username or email already exists.', 400);
+        }
+
+
+        if (user_type === 'kendra') {
+            const kshetraExists = await Kendra.findById(user_type_id);
+            if (!kshetraExists) {
+                return errorResponse(res, 'Invalid kshetra_id.', 400);
+            }
+        }
+
+
+        // Create a new user object with the provided data
+        const data = { user_name, full_name, email, mobile, password, user_type, user_type_id, level };
+
+        // Create a new user
+        const newUser = new Users(data);
+        await newUser.save();
+
+        // Success response
+        successResponse(res, 'User created successfully!', { user_name, full_name, email, mobile, user_type, user_type_id, level }, 201);
+    } catch (error) {
+        errorResponse(res, error.message, 500);
+    }
+};
+
+// Forgot Password
+exports.forgotPassword = async (req, res) => {
+    const { user_name } = req.body;
+
+    if (!user_name) {
+        return errorResponse(res, 'user_name is required', 400);
+    }
+
+    try {
+        // Check if user exists
+        const user = await User.findOne({ user_name });
+
+        if (!user) {
+            return errorResponse(res, 'User not found', 404);
+        }
+
+        // Generate reset token as a JWT
+        const resetToken = jwt.sign({ user_name }, process.env.RESET_PASSWORD_SECRET, { expiresIn: '1h' });
+
+        // Send reset email (commented out for now)
+        // const resetLink = `http://${process.env.CLIENT}/reset-password?token=${resetToken}`;
+        // await sendEmail(user.email, 'Password Reset Request', `Click the link to reset your password: ${resetLink}`);
+
+        return successResponse(res, 'Password reset link sent to your email', { resetToken });
+    } catch (error) {
+        return errorResponse(res, error.message, 500);
+    }
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+    const { newPassword, confirmPassword } = req.body;
+    const { token } = req.query;
+
+    if (!token || !newPassword || !confirmPassword) {
+        return errorResponse(res, 'All fields are required', 400);
+    }
+
+    if (newPassword !== confirmPassword) {
+        return errorResponse(res, 'Passwords do not match', 400);
+    }
+
+    try {
+        // Verify the JWT token
+        const decoded = jwt.verify(token, process.env.RESET_PASSWORD_SECRET);
+
+        // Check if the user exists
+        const user = await User.findOne({ user_name: decoded.user_name });
+
+        if (!user) {
+            return errorResponse(res, 'User not found', 404);
+        }
+
+        // Hash the new password
+        // const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password
+        user.password = newPassword;
+        await user.save();
+
+        return successResponse( res ,'Password updated successfully');
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return errorResponse(res, 'Token has expired', 400);
+        }
+        return errorResponse(res, error.message, 500);
     }
 };

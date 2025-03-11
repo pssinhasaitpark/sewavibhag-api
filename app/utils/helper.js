@@ -46,3 +46,30 @@ exports.readFiles = (file) => {
         }
     });
 };
+
+
+// Helper function to map levels
+exports.mapLevel = (level, userType) => {
+    // Check the userType and map levels accordingly
+    switch (userType) {
+      case 'kendra':
+        if (level === 1) return 'admin';
+        return level;
+  
+      case 'kshetra':
+      case 'jila':
+        if (level === 1) return 'viewer';
+        if (level === 2) return 'admin';
+        return level;
+  
+      case 'prant':
+      case 'vibhag':
+        if (level === 1) return 'viewer';
+        if (level === 2) return 'editor';
+        if (level === 3) return 'admin';
+        return level;
+  
+      default:
+        return level;
+    }
+  };
