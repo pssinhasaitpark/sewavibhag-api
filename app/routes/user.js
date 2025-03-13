@@ -6,7 +6,7 @@ const activityLogMiddleware = require('../middlewares/activityLogMiddleware');
 
 // Public routes
 router.post('/register',authenticate,activityLogMiddleware, registerUser);
-router.post('/createKendraUser',authenticate, createKendraUser);
+router.post('/createKendraUser',createKendraUser);
 router.post('/login',activityLogMiddleware, loginUser);
 router.get('/me',verifyToken, me);
 router.get('/find',verifyToken, find);
