@@ -57,8 +57,7 @@ app.use((err, req, res, next) => {
 // Create HTTP Server
 
 const port = process.env.PORT || 5000;
-const host = process.env.HOST || 'localhost';  // Default to 'localhost' if HOST is not provided
 
-app.listen(port, host, () => {
-    console.log(`🚀 Server is running on http://${host}:${port}`);
+app.listen(port,  () => {
+    console.log(`🚀 Server is running on http://localhost:${port}`);
 });
