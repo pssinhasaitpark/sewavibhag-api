@@ -10,7 +10,7 @@ const router = express.Router();
 
 // Attach the user routes
 router.use('/', userRoutes);
-router.use('/', authenticate, dataRoutes);
+router.use('/',  dataRoutes);
 router.use('/', authenticate, reportingFormRoutes);
 router.use('/', activityRoutes)
 
