@@ -53,7 +53,7 @@ exports.createPrant = async (req, res) => {
     try {
         const { type } = req.body;
         const file = req.file;
-        const fileData = await readFiles(file);  // Get parsed CSV data from file
+        const fileData = await readFiles(file);  
 
         if (fileData.length === 0) {
             return res.status(400).send('No valid data in the CSV file.');
@@ -66,7 +66,7 @@ exports.createPrant = async (req, res) => {
                 return {
                     prant_name: row.Prant,
                     kshetra_id: row.Kshetra_id,
-                    kendra_id: row.kendra_id  // Assuming CSV column is 'kendraId'
+                    kendra_id: row.kendra_id 
                 };
             });
 
